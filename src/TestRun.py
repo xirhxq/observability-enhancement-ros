@@ -9,21 +9,20 @@ import threading
 from enum import Enum
 
 import numpy as np
-import rclpy
+import rospy
 
-from .EKF import EKF
-from .GuidanceLaws.OEHG import OEHG
-from .GuidanceLaws.OEHG_test import OEHG_test
-from .GuidanceLaws.PN import PN
-from .GuidanceLaws.PN_test import PN_test
-from .GuidanceLaws.OEG import OEG
-from .GuidanceLaws.RAIM import RAIM
-from .PlotSingleRun import PlotSingleRun
-from .models.DoubleIntegrate import DoubleIntegrate
-from .models.FixedWing import FixedWing
-from .models.Iris import Iris
+from EKF import EKF
+from GuidanceLaws.OEHG import OEHG
+from GuidanceLaws.OEHG_test import OEHG_test
+from GuidanceLaws.PN import PN
+from GuidanceLaws.PN_test import PN_test
+from GuidanceLaws.OEG import OEG
+from GuidanceLaws.RAIM import RAIM
+from PlotSingleRun import PlotSingleRun
 
-from .Utils import *
+from models.M300.M300 import M300
+
+from Utils import *
 
 
 class State(Enum):
@@ -84,21 +83,10 @@ class SingleRun:
         self.expectedSpeed = 5.0
         self.initialVelocityENU = np.array([0.0, self.expectedSpeed, 0.0])
 
-        if self.model == 'useGroundTruth':
-            rclpy.init()
-            self.me = Iris()
-            self.spinThread = threading.Thread(target=lambda: rclpy.spin(self.me))
-            self.spinThread.start()
-        else:
-            if self.model == 'useFixWingModel':
-                if not self.monteCarlo:
-                    self.me = FixedWing(np.array([[0.0], [0.0], [100.0]]),
-                                        np.array([[0.0], [np.arctan(-28 / 1.5)], [0.0]]), np.sqrt(1.5 ** 2 + 28 ** 2))
-                else:
-                    self.me = FixedWing(np.array([[0], [0], [100]]) + np.random.randn(3, 1) * 20,
-                                        np.array([[0.0], [np.arctan(-28 / 1.5)], [0.0]]), np.sqrt(1.5 ** 2 + 28 ** 2))
-            else:
-                self.me = DoubleIntegrate(np.array([[0.0], [0.0], [100.0]]), np.array([[1.5], [-28], [0.0]]))
+        rospy.init_node('observability_enhancement', anonymous=True)
+        self.me = M300('suav')
+        self.spinThread = threading.Thread(target=lambda: rospy.spin())
+        self.spinThread.start()
 
         self.folderName = f"data/{timeStr}/{self.guidanceLawName}"
         self.ekf = EKF(self.targetState, self.measurementNoise)
@@ -153,10 +141,14 @@ class SingleRun:
         self.state = State.END
 
     def stepInit(self):
-        self.me.intoOffboardMode()
-        self.me.arm()
-        if self.me.isArmed():
-            self.toStepTakeoff()
+        if not self.me.set_local_position():
+            self.toStepEnd()
+        if not self.me.obtain_control():
+            self.toStepEnd()
+        if not self.me.monitored_takeoff():
+            self.toStepLand()
+        print('Initialization completed')
+        self.toStepTakeoff()
 
     def stepTakeoff(self):
         self.me.positionENUControl(self.takeoffPointENU)
@@ -192,7 +184,7 @@ class SingleRun:
                 if np.linalg.norm(self.getRelativePosition()) > 10 and self.endControlFlag == 0:
                     self.ekf.newFrame(self.tStep, self.uTarget, self.zUse)
             self.u = self.guidanceLaw.getU(self.getRelativePosition(),
-                                          self.getRelativeVelocity(), self.me.getVelocityENU()).reshape(3)
+                                        self.getRelativeVelocity(), self.me.getVelocityENU()).reshape(3)
             print(f'uENU = {pointString(self.u)}')
             assert np.all(np.isfinite(self.u)), "u is not finite"
             self.me.acc2attENUControl(self.u)
@@ -229,12 +221,12 @@ class SingleRun:
         print('-' * 20)
         print(f'UAV {self.me.name}: state {self.state.name}')
         print(f'Total time: {self.taskTime:.2f}, state time: {self.stateTime:.2f}')
-        print(f'Armed: {"YES" if self.me.isArmed() else "NO"}({self.me.status.arming_state})')
+        # print(f'Armed: {"YES" if self.me.isArmed() else "NO"}({self.me.status.arming_state})')
         self.me.printMe()
 
     def run(self):
         if self.model == 'useGroundTruth':
-            while self.state != State.END:
+            while self.state != State.END and not rospy.is_shutdown():
                 self.taskTime = time.time() - self.taskStartTime
                 self.stateTime = time.time() - self.stateStartTime
 
@@ -280,8 +272,8 @@ class SingleRun:
 
     def getMeasurement(self):
         relPos = self.getRelativePosition(True)
-        self.z = np.array([[np.arctan2(relPos[2], np.sqrt(relPos[0] ** 2 + relPos[1] ** 2))],
-                           [np.arctan2(relPos[1], relPos[0])]]) + np.random.randn() * self.measurementNoise
+        self.z = np.array([np.arctan2(relPos[2], np.sqrt(relPos[0] ** 2 + relPos[1] ** 2)),
+                           np.arctan2(relPos[1], relPos[0])]) + np.random.randn() * self.measurementNoise
         if self.outliers:
             self.addOutliers()
         if self.loopNum > np.floor(self.timeDelay / self.tStep):
@@ -294,8 +286,8 @@ class SingleRun:
                 self.zUse = self.z
 
     def MeasurementFiltering(self):
-        if np.abs(self.zUse[0, 0] - self.data[-1]['measurementUse'][0, 0]) > np.deg2rad(8) or \
-                np.abs(self.zUse[1, 0] - self.data[-1]['measurementUse'][1, 0]) > np.deg2rad(8):
+        if np.abs(self.zUse[0] - self.data[-1]['measurementUse'][0]) > np.deg2rad(8) or \
+                np.abs(self.zUse[1] - self.data[-1]['measurementUse'][1]) > np.deg2rad(8):
             self.zUse = self.data[-2]['measurementUse']
 
     def getRelativePosition(self, real = False):
@@ -391,12 +383,15 @@ class SingleRun:
 def main():
     sr = SingleRun(GL='OEHG_test', model='useGroundTruth')
     sr.run()
-    sr.saveLog()
 
-    psr = PlotSingleRun('OEHG_test')
-    psr.findLastDir()
-    psr.loadData()
-    psr.plotAll()
+    if len(sr.data) > 0:
+        sr.saveLog()
+        sr.spinThread.join()
+
+        psr = PlotSingleRun('OEHG_test')
+        psr.findLastDir()
+        psr.loadData()
+        psr.plotAll()
 
 
 if __name__ == '__main__':

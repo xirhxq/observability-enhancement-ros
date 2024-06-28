@@ -11,8 +11,8 @@ class EKF:
 
     def newFrame(self, dt, u, z):
         assert isinstance(dt, (int, float)), 'dt must be a scalar'
-        assert u.shape == (3,), 'u must be a 3, vector'
-        assert z.shape == (2,), 'z must be a 2, vector'
+        assert u.shape == (3,), f'u must be a (3,) vector, but now is {u.shape}'
+        assert z.shape == (2,), f'z must be a (2,) vector, but now is {z.shape}'
         if self.ekfUseNum == 1:
             self.x = self.x0Truth - np.array([5, 5, 5, 0.1, 0.1, 0.1])
             print(f"self.x = {self.x}")
@@ -30,12 +30,18 @@ class EKF:
         self.P = np.dot(self.F, np.dot(self.P, self.F.T)) + self.Q
 
     def update(self, z):
+        assert z.shape == (2, ), f'{z.shape = }, should be (2, )'
         H = self.hJacobianAt(self.x[:3] - self.meState)
-        S = np.dot(H, np.dot(self.P, H.T)) + self.R
-        K = np.dot(self.P, np.dot(H.T, np.linalg.inv(S)))
-        self.P = np.dot((np.eye(K.shape[0]) - np.dot(K, H)), self.P)
+        assert H.shape == (2, 6), f'{H.shape = }, should be (2, 6)'
+        S = H @ (self.P @ H.T) + self.R
+        assert S.shape == (2, 2), f'{S.shape = }, should be (2, 2)'
+        K = self.P @ (H.T @ np.linalg.inv(S))
+        assert K.shape == (6, 2), f'{K.shape = }, should be (6, 2)'
+        self.P = (np.eye(K.shape[0]) - K @ H) @ self.P
+        assert self.P.shape == (6, 6), f'{self.P.shape = }, should be (6, 6)'
         dZ = z - self.h(self.x[:3] - self.meState)
-        self.x += np.dot(K, dZ).reshape(6)
+        assert dZ.shape == (2, ), f'{dZ.shape = }, should be (2, )'
+        self.x += (K @ dZ).reshape(6)
        
 
     def setFGQ(self, dt):
@@ -46,7 +52,7 @@ class EKF:
 
     @staticmethod
     def h(x):
-        return np.array([[np.arctan2(x[2], np.sqrt(x[0]**2 + x[1]**2))], [np.arctan2(x[1], x[0])]])
+        return np.array([np.arctan2(x[2], np.sqrt(x[0]**2 + x[1]**2)), np.arctan2(x[1], x[0])])
 
     @staticmethod
     def hJacobianAt(x):

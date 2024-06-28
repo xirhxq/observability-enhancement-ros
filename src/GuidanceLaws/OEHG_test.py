@@ -1,6 +1,6 @@
 import numpy as np
-from .GuidanceLawCommon import GuidanceLawCommon
-from ..Utils import *
+from GuidanceLaws.GuidanceLawCommon import GuidanceLawCommon
+from Utils import *
 
 class OEHG_test:
     def __init__(self):

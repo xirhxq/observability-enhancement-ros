@@ -1,7 +1,7 @@
 import numpy as np
-from .GuidanceLawCommon import GuidanceLawCommon
+from GuidanceLaws.GuidanceLawCommon import GuidanceLawCommon
 import math
-from ..Utils import *
+from Utils import *
 
 class OEHG:
     def __init__(self):

@@ -8,7 +8,7 @@ import time
 import tf
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import (
-    PoseStamped, Twist, TwistStamped, Vector3, Quaternion, Vector3Stamped, QuaternionStamped
+    PoseStamped, Twist, TwistStamped, Vector3, Quaternion, Vector3Stamped, QuaternionStamped, PointStamped
 )
 from std_msgs.msg import (
     Float32, Int16, Int8, String, UInt8, 
@@ -26,8 +26,10 @@ from dji_osdk_ros.msg import (
 )
 from dji_osdk_ros.srv import (
     Activation, CameraAction, DroneArmControl, 
-    DroneTaskControl, MFIOConfig, MFIOSetValue, 
-    SDKControlAuthority, SetLocalPosRef, 
+    DroneTaskControl, DroneTaskControlRequest, 
+    MFIOConfig, MFIOSetValue, 
+    SDKControlAuthority, SDKControlAuthorityRequest,
+    SetLocalPosRef, 
     SendMobileData, SendPayloadData, QueryDroneVersion
 )
 

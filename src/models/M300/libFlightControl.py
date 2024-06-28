@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from DjiUtils import *
+from models.M300.DjiUtils import *
 
 PI = math.acos(-1)
 DEG2RAD_COE = PI / 180

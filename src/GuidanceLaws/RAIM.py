@@ -1,5 +1,5 @@
 import numpy as np
-from .GuidanceLawCommon import GuidanceLawCommon
+from GuidanceLaws.GuidanceLawCommon import GuidanceLawCommon
 
 class RAIM:
     def __init__(self):
