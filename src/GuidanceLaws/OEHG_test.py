@@ -11,8 +11,8 @@ class OEHG_test:
         self.intVcError = 0.0
         self.tStep = 0.02
         self.expectedVc = 5.0
-        self.kp = 4.0
-        self.ki = 12.0
+        self.kp = 2.0
+        self.ki = 2.0
         self.uOEGLos = np.zeros(3)
 
     def getU(self, relativePosition, relativeVelocity, velMe):
