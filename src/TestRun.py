@@ -10,6 +10,7 @@ from enum import Enum
 
 import numpy as np
 import rospy
+import rospkg
 
 from EKF import EKF
 from GuidanceLaws.OEHG import OEHG
@@ -45,6 +46,7 @@ def stepEntrance(method):
 
 class SingleRun:
     def __init__(self, **kwargs):
+        self.algorithmName = 'observability_enhancement'
         self.guidanceLawName = kwargs.get('GL', 'PN')
         self.model = kwargs.get('model', 'useFixedWingModel')
         self.monteCarlo = kwargs.get('monteCarlo', False)
@@ -83,12 +85,13 @@ class SingleRun:
         self.expectedSpeed = 5.0
         self.initialVelocityENU = np.array([0.0, self.expectedSpeed, 0.0])
 
-        rospy.init_node('observability_enhancement', anonymous=True)
+        rospy.init_node(self.algorithmName, anonymous=True)
         self.me = M300('suav')
         self.spinThread = threading.Thread(target=lambda: rospy.spin())
         self.spinThread.start()
 
-        self.folderName = f"data/{timeStr}/{self.guidanceLawName}"
+        rospack = rospkg.RosPack()
+        self.folderName = os.path.join(rospack.get_path(self.algorithmName), 'data', timeStr, self.guidanceLawName)
         self.ekf = EKF(self.targetState, self.measurementNoise)
 
         if self.guidanceLawName == 'PN':
