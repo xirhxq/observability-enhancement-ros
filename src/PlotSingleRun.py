@@ -6,11 +6,12 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.animation import FuncAnimation
 
 class PlotSingleRun:
-    def __init__(self, guidanceLawName):
+    def __init__(self, **kwargs):
         self.useGroundTruth = True
         self.useFixWingModel = True
         self.baseDir = None
-        self.guidanceLawName = guidanceLawName
+        self.packagePath = kwargs.get('packagePath', None)
+        self.guidanceLawName = kwargs.get('guidanceLawName')
         self.lastDir = None
         self.folderPath = None
         self.file = None
@@ -18,7 +19,7 @@ class PlotSingleRun:
         self.gifLoop = 1
 
     def findLastDir(self):
-        self.baseDir = os.path.join(os.getcwd(), 'data')
+        self.baseDir = os.path.join(os.getcwd(), 'data') if self.packagePath is None else os.path.join(self.packagePath, 'data')
         dirs = sorted(os.listdir(self.baseDir))
         for d in dirs:
             if os.path.isdir(os.path.join(self.baseDir, d)) and not d.startswith('.'):

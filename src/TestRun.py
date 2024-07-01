@@ -91,8 +91,11 @@ class SingleRun:
         self.spinThread.start()
 
         rospack = rospkg.RosPack()
-        self.folderName = os.path.join(rospack.get_path(self.algorithmName), 'data', timeStr, self.guidanceLawName)
+        self.packagePath = rospack.get_path(self.algorithmName)
+        self.folderName = os.path.join(self.packagePath, 'data', timeStr, self.guidanceLawName)
         self.ekf = EKF(self.targetState, self.measurementNoise)
+
+        
 
         if self.guidanceLawName == 'PN':
             self.guidanceLaw = PN()
@@ -391,7 +394,7 @@ def main():
     if len(sr.data) > 0:
         sr.saveLog()
 
-        psr = PlotSingleRun('OEHG_test')
+        psr = PlotSingleRun(guidanceLawName='OEHG_test', packagePath=sr.packagePath)
         psr.findLastDir()
         psr.loadData()
         psr.plotAll()
