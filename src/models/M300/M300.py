@@ -75,7 +75,7 @@ class M300:
         self.current_atti = msg
         self.current_euler_angle = self.to_euler_angle(msg.quaternion)
         self.meRPYENU = np.array([self.current_euler_angle.x, self.current_euler_angle.y, self.current_euler_angle.z])
-        self.meRPYNED = np.array([self.meRPYENU[0], -self.meRPYENU[1], rad_round(math.pi / 2 - self.meRPYENU[2])])
+        self.meRPYNED = np.array([self.meRPYENU[1], self.meRPYENU[0], rad_round(math.pi / 2 - self.meRPYENU[2])])
 
     def gimbal_callback(self, msg):
         self.current_gimbal_angle.x = msg.vector.y
@@ -327,10 +327,9 @@ class M300:
         pass
 
     def acc2attENUControl(self, accENU):
-        controlThrust, controlQuaternion = self.acceleration2attitude(accENU)
-        euler = quaternion2euler(controlQuaternion)
+        controlThrust, controlEulerENU = self.acceleration2attitude(accENU)
         control_cmd = Joy()
-        control_cmd.axes = [euler[0], euler[1], controlThrust, euler[2], DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_THRUST | DJISDK.Control.HORIZONTAL_ANGLE | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_BODY]
+        control_cmd.axes = [controlEulerENU[0], controlEulerENU[1], controlThrust, controlEulerENU[2], DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_THRUST | DJISDK.Control.HORIZONTAL_ANGLE | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_BODY]
         self.ctrl_cmd_pub.publish(control_cmd)
 
     def acceleration2attitude(self, uENU):
@@ -344,17 +343,15 @@ class M300:
         pitch = math.atan2(r1, liftAcceleration[2])
         r3 = math.sin(pitch) * r1 + math.cos(pitch) * liftAcceleration[2]
         roll = math.atan2(r2, r3)
-
         controlYaw = self.yawNED
         controlPitch = max(-pitchMax, min(pitch, pitchMax))
         controlRoll = max(-rollMax, min(roll, rollMax))
-        controlEuler = np.array([controlRoll, controlPitch, controlYaw])
-        print('Expected Euler NED: ' + rpyString(controlEuler))
-        controlThrust = 31 * abs(liftAcceleration[2] / math.cos(controlRoll) / math.cos(controlPitch) / GRAVITY)
-        # controlThrust = max(-1, min(controlThrust, 1))
-
-        controlQuaternion = euler2quaternion(controlEuler)
-        return controlThrust, controlQuaternion
+        controlEulerNED = np.array([controlRoll, controlPitch, controlYaw])
+        print('Expected Euler NED: ' + rpyString(controlEulerNED))
+        
+        controlEulerENU = np.array([controlPitch, controlRoll, rad_round(math.pi/2 - controlYaw)])
+        controlThrust = 31.0 * abs(liftAcceleration[2] / math.cos(controlRoll) / math.cos(controlPitch) / GRAVITY)
+        return controlThrust, controlEulerENU
     
     def sendHeartbeat(self):
         pass
