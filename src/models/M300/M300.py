@@ -111,7 +111,7 @@ class M300:
 
 
     def takeoff_land(self, task):
-        rospy.wait_for_service(self.drone_task_service.resolved_name)
+        # rospy.wait_for_service(self.drone_task_service.resolved_name)
         try:
             droneTaskControl = DroneTaskControlRequest()
             droneTaskControl.task = task
@@ -129,7 +129,7 @@ class M300:
             return False
 
     def obtain_control(self):
-        rospy.wait_for_service(self.sdk_ctrl_authority_service.resolved_name)
+        # rospy.wait_for_service(self.sdk_ctrl_authority_service.resolved_name)
         try:
             authority = SDKControlAuthorityRequest()
             authority.control_enable = 1
@@ -147,7 +147,7 @@ class M300:
             return False
 
     def set_local_position(self):
-        rospy.wait_for_service(self.set_local_pos_reference.resolved_name)
+        # rospy.wait_for_service(self.set_local_pos_reference.resolved_name)
         try:
             response = self.set_local_pos_reference()
 

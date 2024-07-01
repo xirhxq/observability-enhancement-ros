@@ -144,12 +144,9 @@ class SingleRun:
         self.state = State.END
 
     def stepInit(self):
-        if not self.me.set_local_position():
-            self.toStepEnd()
-        if not self.me.obtain_control():
-            self.toStepEnd()
-        if not self.me.monitored_takeoff():
+        if not self.me.set_local_position() or not self.me.obtain_control() or not self.me.monitored_takeoff():
             self.toStepLand()
+            return
         print('Initialization completed')
         self.toStepTakeoff()
 
@@ -386,15 +383,20 @@ class SingleRun:
 def main():
     sr = SingleRun(GL='OEHG_test', model='useGroundTruth')
     sr.run()
+    rospy.signal_shutdown('Shutting down')
+    sr.spinThread.join()
+
+    print('Run ended, start plotting')
 
     if len(sr.data) > 0:
         sr.saveLog()
-        sr.spinThread.join()
 
         psr = PlotSingleRun('OEHG_test')
         psr.findLastDir()
         psr.loadData()
         psr.plotAll()
+
+        print('Plotting ended')
 
 
 if __name__ == '__main__':
