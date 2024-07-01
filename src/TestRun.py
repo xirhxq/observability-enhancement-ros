@@ -50,6 +50,7 @@ class State(Enum):
     LAND = 4
     BACK = 5
     END = 6
+    THROTTLE_TEST = 7
 
 
 def stepEntrance(method):
@@ -162,6 +163,14 @@ class SingleRun:
     def toStepEnd(self):
         self.state = State.END
 
+    @stepEntrance
+    def toStepThrottleTest(self):
+        self.state = State.THROTTLE_TEST
+        self.throttleMin = 31.4
+        self.throttleMax = 31.6
+        self.throttle = (self.throttleMax + self.throttleMin) / 2.0
+        self.changeTime = 10.0
+
     def stepInit(self):
         if not self.me.set_local_position() or not self.me.obtain_control() or not self.me.monitored_takeoff():
             self.toStepLand()
@@ -220,6 +229,28 @@ class SingleRun:
         if self.me.underHeight(z=0.2):
             self.toStepEnd()
 
+    def stepThrottleTest(self):
+        if self.stateTime >= 100.0:
+            self.toStepLand()
+        elif np.linalg.norm(self.getRelativePosition()) <= 1:
+            self.toStepLand()
+        elif self.me.underHeight(0.1):
+            self.toStepLand() 
+        else:
+            self.throttle = (self.throttleMin + self.throttleMax) / 2.0
+            self.me.hoverThrottle = self.throttle
+            print(f'{self.me.hoverThrottle = }')
+            if self.stateTime >= self.changeTime:
+                if self.me.meAccelerationNED[2] > 0:
+                    self.throttleMin = self.throttle
+                else:
+                    self.throttleMax = self.throttle
+                self.changeTime += 10.0
+                    
+            if self.throttleMax - self.throttleMin < 0.01:
+                self.toStepLand()
+            self.me.acc2attENUControl(np.zeros(3))
+
     def controlStateMachine(self):
         if self.state == State.INIT:
             self.stepInit()
@@ -235,6 +266,8 @@ class SingleRun:
             self.stepLand()
         elif self.state == State.END:
             exit(0)
+        elif self.state == State.THROTTLE_TEST:
+            self.stepThrottleTest()
 
     def print(self):
         print('-' * 20)
