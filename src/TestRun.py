@@ -21,6 +21,22 @@ from GuidanceLaws.OEG import OEG
 from GuidanceLaws.RAIM import RAIM
 from PlotSingleRun import PlotSingleRun
 
+import builtins
+from rich.console import Console
+from rich import print as rprint
+
+console = Console()
+
+output_file = open("output.txt", "w")
+
+def custom_print(*args, **kwargs):
+    message = " ".join(map(str, args))
+    rprint(message, **kwargs)
+    output_file.write(message + "\n")
+    output_file.flush()
+
+builtins.print = custom_print
+
 from models.M300.M300 import M300
 
 from Utils import *
