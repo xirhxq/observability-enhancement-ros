@@ -30,7 +30,6 @@ class M300:
 
         # State variables
         self.current_atti = QuaternionStamped()
-        self.current_euler_angle = Point()
         self.current_gimbal_angle = Point()
         self.current_pos_raw = Point()
         self.current_height = Float32()
@@ -52,30 +51,32 @@ class M300:
         self.meSpeed = 0
         self.meAccelerationENU = np.zeros(3)
         self.meAccelerationNED = np.zeros(3)
+        self.meAccelerationImuFRD = np.zeros(3)
         self.meAccelerationFRD = np.zeros(3)
         self.meAccelerationFLU = np.zeros(3)
         self.meRPYNED = np.zeros(3)
         self.meRPYENU = np.zeros(3)
 
+        self.hoverThrottle = 31.5
+
+        self.controlEulerNED = np.zeros(3)
+        self.controlEulerENU = np.zeros(3)
+
     def printMe(self):
         print('-' * 10 + 'Me' + '-' * 10)
         print('Position NED: ' + pointString(self.mePositionNED))
         print('Velocity NED: ' + pointString(self.meVelocityNED) + f' speed: {self.meSpeed:.2f}')
-        print('Acceleration NED: ' + pointString(self.meAccelerationNED))
+        print('Acceleration imuFRD: ' + pointString(self.meAccelerationImuFRD))
         print('Acceleration FRD: ' + pointString(self.meAccelerationFRD))
+        print('Acceleration NED: ' + pointString(self.meAccelerationNED))
+        print('Euler ENU: ' + rpyString(self.meRPYENU))
         print('Euler NED: ' + rpyString(self.meRPYNED))
-
-    def to_euler_angle(self, quat):
-        q = [quat.x, quat.y, quat.z, quat.w]
-        euler = tf.transformations.euler_from_quaternion(q)
-        self.current_euler_angle.x, self.current_euler_angle.y, self.current_euler_angle.z = euler
-        return self.current_euler_angle
 
     def attitude_callback(self, msg):
         self.current_atti = msg
-        self.current_euler_angle = self.to_euler_angle(msg.quaternion)
-        self.meRPYENU = np.array([self.current_euler_angle.x, self.current_euler_angle.y, self.current_euler_angle.z])
-        self.meRPYNED = np.array([self.meRPYENU[1], self.meRPYENU[0], rad_round(math.pi / 2 - self.meRPYENU[2])])
+        q = [msg.quaternion.w, msg.quaternion.x, msg.quaternion.y, msg.quaternion.z]
+        self.meRPYNED = quaternion2euler(q)
+        self.meRPYENU = np.array([self.meRPYNED[0], -self.meRPYNED[1], rad_round(math.pi / 2 - self.meRPYNED[2])])
 
     def gimbal_callback(self, msg):
         self.current_gimbal_angle.x = msg.vector.y
@@ -106,7 +107,8 @@ class M300:
 
     def imu_callback(self, msg: Imu):
         self.meAccelerationImuFRD = np.array([msg.linear_acceleration.x, -msg.linear_acceleration.y, -msg.linear_acceleration.z])
-        self.meAccelerationNED = frd2nedRotationMatrix(self.meRPYNED[0], self.meRPYNED[1], self.meRPYNED[2]) @ (self.meAccelerationImuFRD + np.array([0, 0, GRAVITY]))
+        self.meAccelerationFRD = frd2nedRotationMatrix(self.meRPYNED[0], self.meRPYNED[1], self.meRPYNED[2]) @ self.meAccelerationImuFRD
+        self.meAccelerationNED = self.meAccelerationFRD + np.array([0, 0, GRAVITY])
         self.meAccelerationENU = ned2enu(self.meAccelerationNED)
 
 
@@ -264,7 +266,7 @@ class M300:
         self.m210_velocity_yaw_rate_ctrl(vel.x, vel.y, vel.z, yaw_rate)
 
     def uav_control_to_point_facing_it(self, ctrl_cmd):
-        yaw_diff = self.angle2d(self.current_pos_raw, ctrl_cmd) - self.current_euler_angle.z
+        yaw_diff = self.angle2d(self.current_pos_raw, ctrl_cmd) - self.meRPYENU[2]
         yaw_diff = self.rad_round(yaw_diff)
         if self.dis2d(ctrl_cmd, self.current_pos_raw) <= 1:
             yaw_diff = 0
@@ -272,7 +274,7 @@ class M300:
         self.uav_velocity_yaw_rate_ctrl(self.minus(ctrl_cmd, self.current_pos_raw), yaw_diff)
 
     def uav_control_to_point_with_yaw(self, ctrl_cmd, yaw):
-        yaw_diff = yaw - self.current_euler_angle.z
+        yaw_diff = yaw - self.meRPYENU[2]
         yaw_diff = self.rad_round(yaw_diff)
         if self.dis2d(ctrl_cmd, self.current_pos_raw) <= 1:
             yaw_diff = 0
@@ -346,12 +348,13 @@ class M300:
         controlYaw = self.yawNED
         controlPitch = max(-pitchMax, min(pitch, pitchMax))
         controlRoll = max(-rollMax, min(roll, rollMax))
-        controlEulerNED = np.array([controlRoll, controlPitch, controlYaw])
-        print('Expected Euler NED: ' + rpyString(controlEulerNED))
+        self.controlEulerNED = np.array([controlRoll, controlPitch, controlYaw])
+        print('Expected Euler NED: ' + rpyString(self.controlEulerNED))
         
-        controlEulerENU = np.array([controlPitch, controlRoll, rad_round(math.pi/2 - controlYaw)])
-        controlThrust = 31.0 * abs(liftAcceleration[2] / math.cos(controlRoll) / math.cos(controlPitch) / GRAVITY)
-        return controlThrust, controlEulerENU
+        self.controlEulerENU = np.array([controlRoll, -controlPitch, rad_round(math.pi/2 - controlYaw)])
+        controlThrust = self.hoverThrottle * abs(liftAcceleration[2] / math.cos(controlRoll) / math.cos(controlPitch) / GRAVITY)
+        print(f"controlThrust = {controlThrust}")
+        return controlThrust, self.controlEulerENU
     
     def sendHeartbeat(self):
         pass

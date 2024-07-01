@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import pickle
 import numpy as np
@@ -213,7 +215,28 @@ class PlotSingleRun:
         plt.savefig(os.path.join(self.folderPath, 'MissDistance.png'))
         plt.close()
 
-    def plotAttitudeMe(self):
+    def plotEulerMeAndCommandENU(self):
+        self.createFigure()
+
+        time = [d['t'] for d in self.data]
+        meRPYENU = np.array([d['meRPYENU'] for d in self.data])
+        cmdRPYENU = np.array([d['cmdRPYENU'] for d in self.data])
+
+        str = ['Roll', 'Pitch', 'Yaw']
+        colors = ['r', 'g', 'b']
+
+        for i, name in enumerate(str):
+            plt.subplot(3, 1, i + 1)
+            plt.plot(time, np.rad2deg(meRPYENU[:, i]), colors[i] + '-', linewidth=2, label=name)
+            plt.plot(time, np.rad2deg(cmdRPYENU[:, i]), colors[i] + '--', linewidth=2, label=name + ' command')
+            plt.xlabel('Time (s)')
+            plt.ylabel(str[i] + ' angle (deg)')
+            plt.legend()
+
+        plt.savefig(os.path.join(self.folderPath, 'EulerMeAndCommand.png'))
+        plt.close()
+
+    def plotAttitudeMeENU(self):
         self.createFigure()
 
         time = [d['t'] for d in self.data]
@@ -225,17 +248,17 @@ class PlotSingleRun:
         plt.subplot(3, 1, 1)
         plt.plot(time, np.rad2deg(attitude[0, :]), 'r', linewidth=2)
         plt.xlabel('Time (s)')
-        plt.ylabel('Pitch angle (deg)')
+        plt.ylabel('Roll angle (deg)')
 
         plt.subplot(3, 1, 2)
         plt.plot(time, np.rad2deg(attitude[1, :]), 'g', linewidth=2)
         plt.xlabel('Time (s)')
-        plt.ylabel('Yaw angle (deg)')
+        plt.ylabel('Pitch angle (deg)')
 
         plt.subplot(3, 1, 3)
         plt.plot(time, np.rad2deg(attitude[2, :]), 'r', linewidth=2)
         plt.xlabel('Time (s)')
-        plt.ylabel('Roll angle (deg)')
+        plt.ylabel('Yaw angle (deg)')
         plt.savefig(os.path.join(self.folderPath, 'AttitudeMe.png'))
         plt.close()
     
@@ -474,20 +497,20 @@ class PlotSingleRun:
         plt.subplot(3, 1, 1)
         plt.plot(time, acceNED[0, :], 'r', linewidth=2, label="Acceleration command N")
         plt.plot(time, acceResponse[0, :], '--', color=[1.0, 0, 0, 0.5], label="Acceleration response N")
-        plt.ylim(-5,5)
+        # plt.ylim(-20,20)
         plt.legend()
 
         plt.subplot(3, 1, 2)
         plt.plot(time, acceNED[1, :], 'g', linewidth=2, label="Acceleration command E")
         plt.plot(time, acceResponse[1, :], '--', color=[0, 1, 0, 0.5], label="Acceleration response E")
-        plt.ylim(-5,5)
+        plt.ylim(-20,20)
         plt.legend()
 
         plt.subplot(3, 1, 3)
         plt.plot(time, acceNED[2, :], 'b', linewidth=2, label="Acceleration command D")
         plt.plot(time, acceResponse[2, :], '--', color=[0, 0, 1, 0.5], label="Acceleration response D")
         plt.xlabel('Time (s)')
-        plt.ylim(-5,5)
+        plt.ylim(-20,20)
         plt.legend()
         
         plt.savefig(os.path.join(self.folderPath, 'AccelerationResponse.png'))
@@ -610,7 +633,7 @@ class PlotSingleRun:
             estimateTarget.set_3d_properties([ekfState[2, frame]])
             return meOEHG, target, estimateTarget
 
-        anim = FuncAnimation(fig, update, np.arange(start=0, stop=len(self.data), step=100), interval=50)
+        anim = FuncAnimation(fig, update, np.arange(start=0, stop=len(self.data), step=1), interval=50)
         fileName = 'Estimating.gif'
         pathStr = os.path.join(self.folderPath, fileName)
         anim.save(pathStr, writer='pillow')
@@ -640,13 +663,15 @@ class PlotSingleRun:
             self.plotLeadAngle()
             self.plotTargetPositionError()
             self.plotTargetVelocityError()
+            self.plotAttitudeMeENU()
+            self.plotEulerMeAndCommandENU()
             self.createGif()
         else:
             self.plotRelativeDistanceError()
             self.plotRelativeVelocityError()
             self.plotTrajectory()
             if self.useFixWingModel:
-                self.plotAttitudeMe()
+                self.plotAttitudeMeENU()
             self.plotAMy()
             self.plotAMz()
             self.plotXYZTrajectories()

@@ -408,6 +408,10 @@ class SingleRun:
         currentData['lookAngle'] = copy.copy(self.getLookAngle())
         if self.model == 'useGroundTruth':
             currentData['meAttitude'] = copy.copy(self.me.getAttitude())
+            currentData['meRPYENU'] = copy.copy(self.me.meRPYENU)
+            currentData['meRPYNED'] = copy.copy(self.me.meRPYNED)
+            currentData['cmdRPYENU'] = copy.copy(self.me.controlEulerENU)
+            currentData['cmdRPYNED'] = copy.copy(self.me.controlEulerNED)
             currentData['meAccelerationNED'] = copy.copy(self.me.getAccelerationNED())
             currentData['meAcceCommandNED'] = copy.copy(self.me.guidanceCommandNED)
         else:
