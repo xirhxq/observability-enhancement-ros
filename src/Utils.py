@@ -42,6 +42,15 @@ def frd2nedRotationMatrix(rpyRadNED):
     R = np.linalg.inv(ned2frdRotationMatrix(rpyRadNED))
     return R
 
+def camera2bodyFRDrotationMatrix(cameraPitchRad):
+    # camera lower than body, then cameraPitch is positive
+    R_y = np.array([
+            [np.cos(cameraPitchRad), 0, -np.sin(cameraPitchRad)],
+            [0, 1, 0],
+            [np.sin(cameraPitchRad), 0, np.cos(cameraPitchRad)]
+        ])
+    return R_y
+
 def enu2losRotationMatrix(yAxisRotationAngle, zAxisRotationAngle):
 
     R_y = np.array([
