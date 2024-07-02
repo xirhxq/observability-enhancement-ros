@@ -92,6 +92,7 @@ class SingleRun:
         self.real = False
 
         timeStr = kwargs.get('prefix', datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
+        suffixConditionStr = f"v{kwargs.get('vel'):.0f}h{kwargs.get('height'):.0f}"
 
         self.outliers = kwargs.get('outliers', False)
         self.timeDelay = kwargs.get('timeDelay', 0.0)
@@ -120,7 +121,12 @@ class SingleRun:
 
         rospack = rospkg.RosPack()
         self.packagePath = rospack.get_path(self.algorithmName)
-        self.folderName = os.path.join(self.packagePath, 'data', timeStr, self.guidanceLawName)
+        self.folderName = os.path.join(
+            self.packagePath, 
+            'data', 
+            timeStr + suffixConditionStr, 
+            self.guidanceLawName
+        )
         os.makedirs(self.folderName, exist_ok=True)
         self.ekf = EKF(self.targetState, self.measurementNoise)
 
