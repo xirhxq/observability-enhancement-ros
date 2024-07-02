@@ -4,6 +4,7 @@ import copy
 import datetime
 import os
 import pickle
+import sys
 import time
 import threading
 from enum import Enum
@@ -26,16 +27,6 @@ from rich.console import Console
 from rich import print as rprint
 
 console = Console()
-
-output_file = open("output.txt", "w")
-
-def custom_print(*args, **kwargs):
-    message = " ".join(map(str, args))
-    rprint(message, **kwargs)
-    output_file.write(message + "\n")
-    output_file.flush()
-
-builtins.print = custom_print
 
 from models.M300.M300 import M300
 
@@ -110,9 +101,18 @@ class SingleRun:
         rospack = rospkg.RosPack()
         self.packagePath = rospack.get_path(self.algorithmName)
         self.folderName = os.path.join(self.packagePath, 'data', timeStr, self.guidanceLawName)
+        os.makedirs(self.folderName, exist_ok=True)
         self.ekf = EKF(self.targetState, self.measurementNoise)
 
-        
+        cliOutputFile = open(os.path.join(self.folderName, 'output.txt'), "w")
+
+        def custom_print(*args, **kwargs):
+            message = " ".join(map(str, args))
+            rprint(message, **kwargs)
+            cliOutputFile.write(message + "\n")
+            cliOutputFile.flush()
+
+        builtins.print = custom_print
 
         if self.guidanceLawName == 'PN':
             self.guidanceLaw = PN()
@@ -310,7 +310,6 @@ class SingleRun:
                     break
 
     def saveLog(self):
-        os.makedirs(self.folderName, exist_ok=True)
         self.fileName = os.path.join(self.folderName, 'data.pkl')
         with open(self.fileName, "wb") as file:
             pickle.dump(self.data, file)
