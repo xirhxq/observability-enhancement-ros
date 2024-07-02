@@ -243,7 +243,7 @@ class PlotSingleRun:
         attitude = np.zeros((3, len(self.data)))
 
         for i in range(len(self.data)):
-            attitude[0:3, i] = np.squeeze(self.data[i]['meAttitude'])
+            attitude[0:3, i] = np.squeeze(self.data[i]['meRPYENU'])
 
         plt.subplot(3, 1, 1)
         plt.plot(time, np.rad2deg(attitude[0, :]), 'r', linewidth=2)
@@ -259,7 +259,7 @@ class PlotSingleRun:
         plt.plot(time, np.rad2deg(attitude[2, :]), 'r', linewidth=2)
         plt.xlabel('Time (s)')
         plt.ylabel('Yaw angle (deg)')
-        plt.savefig(os.path.join(self.folderPath, 'AttitudeMe.png'))
+        plt.savefig(os.path.join(self.folderPath, 'AttitudeMeENU.png'))
         plt.close()
     
     def plotVelocityAndAcceleration(self):

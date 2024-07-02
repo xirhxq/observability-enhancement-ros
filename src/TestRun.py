@@ -415,7 +415,6 @@ class SingleRun:
         currentData['meVelocityNorm'] = copy.copy(np.linalg.norm(self.me.getVelocityENU()))
         currentData['lookAngle'] = copy.copy(self.getLookAngle())
         if self.model == 'useGroundTruth':
-            currentData['meAttitude'] = copy.copy(self.me.getAttitude())
             currentData['meRPYENU'] = copy.copy(self.me.meRPYENU)
             currentData['meRPYNED'] = copy.copy(self.me.meRPYNED)
             currentData['cmdRPYENU'] = copy.copy(self.me.controlEulerENU)
@@ -424,7 +423,6 @@ class SingleRun:
             currentData['meAcceCommandNED'] = copy.copy(self.me.guidanceCommandNED)
         else:
             if self.model == 'useFixWingModel':
-                currentData['meAttitude'] = copy.copy(self.me.getAttitude())
                 currentData['rollAngleCommand'] = copy.copy(self.me.rollAngleCommand)
         currentData['relativePosition'] = copy.copy(self.getRelativePosition())
         currentData['relativeDistance'] = copy.copy(np.linalg.norm(self.getRelativePosition()))
