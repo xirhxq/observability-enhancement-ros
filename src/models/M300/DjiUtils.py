@@ -41,6 +41,8 @@ except ImportError:
     # These services are only available if ADVANCED_SENSING is defined
     pass
 
+from spirecv_msgs.msg import TargetsInFrame, Target
+
 def get_ros_package_path(package_name):
     import rospkg
     rospack = rospkg.RosPack()
