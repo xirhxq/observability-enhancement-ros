@@ -2,6 +2,7 @@
 
 from models.M300.libFlightControl import *
 from Utils import *
+from QuaternionBuffer import QuaternionBuffer
 
 class M300:
     def __init__(self, uav_name):
@@ -59,6 +60,9 @@ class M300:
         self.hoverThrottle = rospy.get_param('hoverThrottle')
         self.rollSaturationRad = np.deg2rad(rospy.get_param('rollSaturationDeg'))
         self.pitchSaturationRad = np.deg2rad(rospy.get_param('pitchSaturationDeg'))
+        
+        # Buffer
+        self.qBuffer = QuaternionBuffer()
 
     def printMe(self):
         print('-' * 10 + 'Me' + '-' * 10)
@@ -75,6 +79,12 @@ class M300:
         q = [msg.quaternion.w, msg.quaternion.x, msg.quaternion.y, msg.quaternion.z]
         self.meRPYRadENU = quaternion2euler(q)
         self.meRPYRadNED = rpyENU2NED(self.meRPYRadENU)
+        if not rospy.get_param('useCamera'):
+            self.qBuffer.addMessage(q)
+            qDelay = self.qBuffer.getMessage()
+            if qDelay != None:
+                self.meRPYRadENUDelay = quaternion2euler(qDelay)
+                self.meRPYRadNEDDelay = rpyENU2NED(self.meRPYRadENUDelay)
 
     def gimbal_callback(self, msg):
         self.current_gimbal_angle.x = msg.vector.y
