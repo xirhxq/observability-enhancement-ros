@@ -75,8 +75,8 @@ class M300:
     def attitude_callback(self, msg):
         self.current_atti = msg
         q = [msg.quaternion.w, msg.quaternion.x, msg.quaternion.y, msg.quaternion.z]
-        self.meRPYNED = quaternion2euler(q)
-        self.meRPYENU = np.array([self.meRPYNED[0], -self.meRPYNED[1], rad_round(math.pi / 2 - self.meRPYNED[2])])
+        self.meRPYENU = quaternion2euler(q)
+        self.meRPYNED = rpyENU2NED(self.meRPYENU)
 
     def gimbal_callback(self, msg):
         self.current_gimbal_angle.x = msg.vector.y

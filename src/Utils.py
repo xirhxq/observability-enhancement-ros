@@ -115,6 +115,14 @@ def euler2quaternion(attitudeAngle):
     return quaternion
 
 
+def rpyENU2NED(rpyRadENU):
+    return np.array([rpyRadENU[0], -rpyRadENU[1], (np.pi / 2 - rpyRadENU[2]) % (2 * np.pi)])
+
+
+def rpyNED2ENU(rpyRadNED):
+    return rpyENU2NED(rpyRadNED)
+
+
 def pointString(point):
     assert len(point) == 3, f'Length of point should be 3, but get {len(point)}'
     return f"({point[0]:.2f}, {point[1]:.2f}, {point[2]:.2f})"
