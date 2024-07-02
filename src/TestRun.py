@@ -308,6 +308,7 @@ class SingleRun:
             self.stepHover()
 
     def print(self):
+        console.clear()
         print('-' * 20)
         print(f'UAV {self.me.name}: state {self.state.name}')
         print(f'Total time: {self.taskTime:.2f}, state time: {self.stateTime:.2f}')
