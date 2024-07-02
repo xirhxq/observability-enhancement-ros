@@ -489,27 +489,28 @@ class PlotSingleRun:
 
         acceNED = np.zeros((3, len(self.data)))
         acceResponse = np.zeros((3, len(self.data)))
+        acceFusedResponse = np.zeros((3, len(self.data)))
 
         time = [d['t'] for d in self.data]
         for i in range(len(self.data)):
             acceNED[0:3, i] = np.squeeze(self.data[i]['meAcceCommandNED'])
-            acceResponse[0:3, i] = np.squeeze(self.data[i]['meAccelerationNED'])
+            acceFusedResponse[0:3, i] = np.squeeze(self.data[i]['meAccelerationFusedNED'])
 
         plt.subplot(3, 1, 1)
         plt.plot(time, acceNED[0, :], 'r', linewidth=2, label="Acceleration command N")
-        plt.plot(time, acceResponse[0, :], '--', color=[1.0, 0, 0, 0.5], label="Acceleration response N")
+        plt.plot(time, acceFusedResponse[0, :], '--', color=[1, 0, 0, 0.5], label="Acceleration response N")
         # plt.ylim(-20,20)
         plt.legend()
 
         plt.subplot(3, 1, 2)
         plt.plot(time, acceNED[1, :], 'g', linewidth=2, label="Acceleration command E")
-        plt.plot(time, acceResponse[1, :], '--', color=[0, 1, 0, 0.5], label="Acceleration response E")
+        plt.plot(time, acceFusedResponse[1, :], '--', color=[0, 1, 0, 0.5], label="Acceleration response E")
         # plt.ylim(-20,20)
         plt.legend()
 
         plt.subplot(3, 1, 3)
         plt.plot(time, acceNED[2, :], 'b', linewidth=2, label="Acceleration command D")
-        plt.plot(time, acceResponse[2, :], '--', color=[0, 0, 1, 0.5], label="Acceleration response D")
+        plt.plot(time, acceFusedResponse[2, :], '--', color=[0, 0, 1, 0.5], label="Acceleration response D")
         plt.xlabel('Time (s)')
         # plt.ylim(-20,20)
         plt.legend()
