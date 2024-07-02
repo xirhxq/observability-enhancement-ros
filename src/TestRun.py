@@ -43,6 +43,7 @@ class State(Enum):
     BACK = 5
     END = 6
     THROTTLE_TEST = 7
+    HOVER = 8
 
 
 def stepEntrance(method):
@@ -177,6 +178,10 @@ class SingleRun:
         self.throttle = (self.throttleMax + self.throttleMin) / 2.0
         self.changeTime = 10.0
 
+    @stepEntrance
+    def toStepHover(self):
+        self.state = State.HOVER
+
     def stepInit(self):
         if not self.reallyTakeoff:
             self.toStepTakeoff()
@@ -260,6 +265,11 @@ class SingleRun:
                 self.toStepLand()
             self.me.acc2attENUControl(np.zeros(3))
 
+    def stepHover(self):
+        self.me.hover()
+        if self.stateTime >= 5.0:
+            self.toStepLand()
+
     def controlStateMachine(self):
         if self.state == State.INIT:
             self.stepInit()
@@ -277,6 +287,8 @@ class SingleRun:
             exit(0)
         elif self.state == State.THROTTLE_TEST:
             self.stepThrottleTest()
+        elif self.state == State.HOVER:
+            self.stepHover()
 
     def print(self):
         print('-' * 20)
