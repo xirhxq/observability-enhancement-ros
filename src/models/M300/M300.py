@@ -355,6 +355,11 @@ class M300:
         controlThrust = self.hoverThrottle * abs(liftAcceleration[2] / math.cos(controlRoll) / math.cos(controlPitch) / GRAVITY)
         print(f"controlThrust = {controlThrust}")
         return controlThrust, self.controlEulerENU
+
+    def hover(self):
+        control_cmd = Joy()
+        control_cmd.axes = [0, 0, 0, self.yawRadENU, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_VELOCITY | DJISDK.Control.HORIZONTAL_VELOCITY | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_GROUND]
+        self.ctrl_cmd_pub.publish(control_cmd)
     
     def sendHeartbeat(self):
         pass
@@ -367,9 +372,6 @@ class M300:
     
     def getPositionENU(self):
         return self.mePositionENU
-    
-    def getAttitude(self):
-        return self.meRPYNED
     
     def getAccelerationNED(self):
         return self.meAccelerationNED
