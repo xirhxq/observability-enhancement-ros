@@ -44,6 +44,7 @@ class State(Enum):
     END = 6
     THROTTLE_TEST = 7
     HOVER = 8
+    BOOST = 9
 
 
 def stepEntrance(method):
@@ -67,21 +68,13 @@ class SingleRun:
         self.nn = 3
 
         vel = kwargs.get('vel')
-        prepareLength = vel * 1.0  #1m/s:0.5m; 2m/s:1.6m; 
         guidanceLength = kwargs.get('disGuidance')
-        totalLength = prepareLength + guidanceLength
 
         yawDegNED = kwargs.get('yawDegNED') 
         self.yawRadNED = np.deg2rad(yawDegNED)
         self.yawRadENU = yawRadNED2ENU(self.yawRadNED)
-        self.targetState = np.array([
-            totalLength * math.sin(self.yawRadNED),
-            totalLength * math.cos(self.yawRadNED),
-            0,
-            0,
-            0,
-            0
-        ])
+        self.unitVector = np.array([math.sin(self.yawRadNED), math.cos(self.yawRadNED)])
+        self.targetState = np.concatenate([guidanceLength * self.unitVector, np.zeros(4)])
         self.uTarget = np.array([0, 0, 0])
 
         self.u = None
@@ -106,7 +99,8 @@ class SingleRun:
 
         self.reallyTakeoff = kwargs.get('takeoff', False)
 
-        self.takeoffPointENU = np.array([0.0, 0.0, kwargs.get('height')])
+        self.takeoffPointENU = np.array([0, 0, kwargs.get('height')])
+        self.preparePointENU = np.concatenate([-self.unitVector * 20, np.array([kwargs.get('height')])])
         self.expectedSpeed = vel
         self.initialVelocityENU = np.array([
             self.expectedSpeed * math.sin(self.yawRadNED), 
@@ -204,6 +198,10 @@ class SingleRun:
     def toStepHover(self):
         self.state = State.HOVER
 
+    @stepEntrance
+    def toStepBoost(self):
+        self.state = State.BOOST
+
     def stepInit(self):
         if not self.reallyTakeoff:
             self.toStepTakeoff()
@@ -216,17 +214,19 @@ class SingleRun:
 
     def stepTakeoff(self):
         self.me.positionENUControl(self.takeoffPointENU, self.yawRadENU)
-        if self.me.nearPositionENU(self.takeoffPointENU) and self.me.nearSpeed(0.0):
-            print(f"stepPrepareInitialMePositionNED = {self.me.mePositionNED}")
-            print(f"stepPrepareInitialMeVelocityNED = {self.me.meVelocityNED}")
+        print(f'{self.me.mePositionENU = }')
+        print(f'{self.takeoffPointENU = }')
+        print(f'{self.me.distanceToPointENU(self.takeoffPointENU) = }')
+        if self.me.nearPositionENU(self.takeoffPointENU) and self.me.nearSpeed(0):
             self.toStepPrepare()
 
     def stepPrepare(self):
-        self.me.velocityENUControl(self.initialVelocityENU, self.yawRadENU)
-        if self.me.nearSpeed(self.expectedSpeed):
-            print(f"stepGuidanceInitialMePositionNED = {self.me.mePositionNED}")
-            print(f"stepGuidanceInitialMeVelocityNED = {self.me.meVelocityNED}")
-            self.toStepGuidance()
+        self.me.positionENUControl(self.preparePointENU, self.yawRadENU)
+        print(f'{self.me.mePositionENU = }')
+        print(f'{self.preparePointENU = }')
+        print(f'{self.me.distanceToPointENU(self.preparePointENU) = }')
+        if self.me.nearPositionENU(self.preparePointENU) and self.me.nearSpeed(0):
+            self.toStepBoost()
 
     def stepGuidance(self):
         if self.stateTime >= 100.0:
@@ -251,7 +251,7 @@ class SingleRun:
             self.log()
 
     def stepBack(self):
-        self.me.positionENUControl(self.takeoffPointENU)
+        self.me.positionENUControl(self.takeoffPointENU, self.yawRadENU)
         if self.me.nearPositionENU(self.takeoffPointENU):
             self.toStepLand()
 
@@ -285,7 +285,14 @@ class SingleRun:
     def stepHover(self):
         self.me.hoverWithYaw(self.yawRadENU)
         if self.stateTime >= 5.0:
-            self.toStepLand()
+            self.toStepBack()
+
+    def stepBoost(self):
+        self.me.velocityENUControl(self.initialVelocityENU, self.yawRadENU)
+        if np.dot(self.me.mePositionENU[:2], self.unitVector) > 0:
+            print(f"stepGuidanceInitialMePositionNED = {self.me.mePositionNED}")
+            print(f"stepGuidanceInitialMeVelocityNED = {self.me.meVelocityNED}")
+            self.toStepGuidance()
 
     def controlStateMachine(self):
         if self.state == State.INIT:
@@ -306,6 +313,8 @@ class SingleRun:
             self.stepThrottleTest()
         elif self.state == State.HOVER:
             self.stepHover()
+        elif self.state == State.BOOST:
+            self.stepBoost()
 
     def print(self):
         console.clear()
@@ -477,8 +486,8 @@ def main(args):
         GL='OEHG_test', 
         model='useGroundTruth',
         vel=8.0,
-        height=15.0,
-        yawDegNED=0,
+        height=5.0,
+        yawDegNED=40,
         disGuidance=20,
         **vars(args)
     )
