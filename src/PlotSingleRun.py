@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import tqdm
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
@@ -575,6 +576,8 @@ class PlotSingleRun:
         plt.close()
 
     def createGif(self):
+        frames = np.arange(start=0, stop=len(self.data), step=1)
+        tq = tqdm.tqdm(total=len(frames))
         ekfState = np.zeros((6, len(self.data)))
         targetPosition = np.zeros((3, len(self.data)))
         mePosition = np.zeros((3, len(self.data)))
@@ -625,6 +628,7 @@ class PlotSingleRun:
         ax.view_init(elev=10, azim=20)
         
         def update(frame):
+            tq.update(1)
             meOEHG.set_data(mePosition[0, :frame], mePosition[1, :frame])
             meOEHG.set_3d_properties(mePosition[2, :frame])
             target.set_data([targetPosition[0, frame]], [targetPosition[1, frame]])
@@ -633,10 +637,11 @@ class PlotSingleRun:
             estimateTarget.set_3d_properties([ekfState[2, frame]])
             return meOEHG, target, estimateTarget
 
-        anim = FuncAnimation(fig, update, np.arange(start=0, stop=len(self.data), step=1), interval=50)
+        anim = FuncAnimation(fig, update, frames, interval=50)
         fileName = 'Estimating.gif'
         pathStr = os.path.join(self.folderPath, fileName)
         anim.save(pathStr, writer='pillow')
+        tq.close()
 
     def createFigure(self):
         plt.figure()
