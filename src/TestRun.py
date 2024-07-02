@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 import copy
 import datetime
 import os
@@ -88,6 +89,8 @@ class SingleRun:
         self.taskTime = 0
         self.stateTime = 0
 
+        self.reallyTakeoff = kwargs.get('takeoff', False)
+
         self.takeoffHeight = 15.0
         self.takeoffPointENU = np.array([0.0, 0.0, self.takeoffHeight])
         self.expectedSpeed = 5.0
@@ -113,6 +116,9 @@ class SingleRun:
             cliOutputFile.flush()
 
         builtins.print = custom_print
+
+        if self.reallyTakeoff:
+            input('Really going to takeoff, input anything to confirm...')
 
         if self.guidanceLawName == 'PN':
             self.guidanceLaw = PN()
@@ -172,6 +178,9 @@ class SingleRun:
         self.changeTime = 10.0
 
     def stepInit(self):
+        if not self.reallyTakeoff:
+            self.toStepTakeoff()
+            return
         if not self.me.set_local_position() or not self.me.obtain_control() or not self.me.monitored_takeoff():
             self.toStepLand()
             return
@@ -435,8 +444,8 @@ class SingleRun:
         self.data.append(currentData)
 
 
-def main():
-    sr = SingleRun(GL='OEHG_test', model='useGroundTruth')
+def main(args):
+    sr = SingleRun(GL='OEHG_test', model='useGroundTruth', **vars(args))
     sr.run()
     rospy.signal_shutdown('Shutting down')
     sr.spinThread.join()
@@ -455,4 +464,11 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='ROS node with command line parameters')
+    parser.add_argument('--takeoff', action='store_true', help='explicit takeoff command')
+
+    args = parser.parse_args()
+
+    print(args)
+
+    main(args)
