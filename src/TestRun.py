@@ -433,7 +433,7 @@ class SingleRun:
             self.taskTime = time.time() - self.taskStartTime
             self.stateTime = time.time() - self.stateStartTime
 
-            self.print()
+            self.print() 
 
             self.me.sendHeartbeat()
             self.controlStateMachine()
