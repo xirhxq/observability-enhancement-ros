@@ -29,6 +29,8 @@
     <!-- Measurement arguments -->
     <arg name="outliers" default="false"/>
     <arg name="timeDelay" default="0.0"/>
+    <arg name="useCamera" default="false"/>
+    <arg name="cameraPitch" default="0.0"/>
 
     <!-- Throttle Test arguments -->
     <arg name="throttleTestOn" default="false"/>
@@ -60,6 +62,8 @@
 
     <param name="outliers" value="$(arg outliers)"/>
     <param name="timeDelay" value="$(arg timeDelay)"/>
+    <param name="useCamera" value="$(arg useCamera)"/>
+    <param name="cameraPitch" value="$(arg cameraPitch)"/>
 
     <param name="throttleTestOn" value="$(arg throttleTestOn)"/>
     <param name="throttleTestHeight" value="$(arg throttleTestHeight)"/>
