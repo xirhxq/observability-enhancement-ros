@@ -105,8 +105,7 @@ class SingleRun:
 
         self.reallyTakeoff = kwargs.get('takeoff', False)
 
-        self.takeoffHeight = 15.0
-        self.takeoffPointENU = np.array([0.0, 0.0, self.takeoffHeight])
+        self.takeoffPointENU = np.array([0.0, 0.0, kwargs.get('height')])
         self.expectedSpeed = vel
         self.initialVelocityENU = np.array([
             self.expectedSpeed * math.sin(self.yawRadNED), 
@@ -153,7 +152,7 @@ class SingleRun:
         else:
             raise ValueError("Invalid guidance law name")
         
-        print(f"Simulation Condition: takeoffHeight = {self.takeoffHeight}, expectedSpeed = {self.expectedSpeed}, targetState = {self.targetState}")
+        print(f"Simulation Condition: takeoffHeight = {kwargs.get('height')}, expectedSpeed = {self.expectedSpeed}, targetState = {self.targetState}")
         print(f"GL: {self.guidanceLawName}")
 
     def getTimeNow(self):
@@ -470,7 +469,8 @@ def main(args):
     sr = SingleRun(
         GL='OEHG_test', 
         model='useGroundTruth',
-        vel=1.0,
+        vel=8.0,
+        height=15.0,
         yawDegNED=0,
         disGuidance=20,
         **vars(args)
