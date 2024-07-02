@@ -232,22 +232,23 @@ class M300:
         control_cmd.axes = [velE, velN, velU, yawRateRad, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_VELOCITY | DJISDK.Control.HORIZONTAL_VELOCITY | DJISDK.Control.YAW_RATE | DJISDK.Control.HORIZONTAL_GROUND]
         self.ctrl_cmd_pub.publish(control_cmd)
 
-    def groundPosPosYaw(self, posE, posN, posU, yawRadENU):
+    def groundPosPosYaw(self, posDiffE, posDiffN, posU, yawRadENU):
         control_cmd = Joy()
-        control_cmd.axes = [posE, posN, posU, yawRadENU, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_POSITION | DJISDK.Control.HORIZONTAL_POSITION | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_GROUND]
+        control_cmd.axes = [posDiffE, posDiffN, posU, yawRadENU, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_POSITION | DJISDK.Control.HORIZONTAL_POSITION | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_GROUND]
         self.ctrl_cmd_pub.publish(control_cmd)
     
     def positionENUControl(self, posENU, yawRadENU):
-        self.groundPosPosYaw(*posENU.tolist(), yawRadENU)
+        posXYDiff = posENU[:2] - self.mePositionENU[:2]
+        self.groundPosPosYaw(*posXYDiff.tolist(), posENU[2], yawRadENU)
 
     def groundVelPosYaw(self, velE, velN, posU, yawRadENU):
         control_cmd = Joy()
         control_cmd.axes = [velE, velN, posU, yawRadENU, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_POSITION | DJISDK.Control.HORIZONTAL_VELOCITY | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_GROUND]
         self.ctrl_cmd_pub.publish(control_cmd)
 
-    def groundPosPosYawRate(self, posE, posN, posU, yawRateRad):
+    def groundPosPosYawRate(self, posDiffE, posDiffN, posU, yawRateRad):
         control_cmd = Joy()
-        control_cmd.axes = [posE, posN, posU, yawRateRad, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_POSITION | DJISDK.Control.HORIZONTAL_POSITION | DJISDK.Control.YAW_RATE | DJISDK.Control.HORIZONTAL_GROUND]
+        control_cmd.axes = [posDiffE, posDiffN, posU, yawRateRad, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_POSITION | DJISDK.Control.HORIZONTAL_POSITION | DJISDK.Control.YAW_RATE | DJISDK.Control.HORIZONTAL_GROUND]
         self.ctrl_cmd_pub.publish(control_cmd)
 
     def uav_velocity_yaw_rate_ctrl(self, pos_diff, yaw_diff):
