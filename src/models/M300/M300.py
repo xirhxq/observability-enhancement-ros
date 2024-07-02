@@ -28,6 +28,7 @@ class M300:
         rospy.Subscriber(uav_name + "/dji_osdk_ros/velocity", Vector3Stamped, self.velocity_callback)
         rospy.Subscriber(uav_name + "/dji_osdk_ros/imu", Imu, self.imu_callback)
         rospy.Subscriber(uav_name + "/dji_osdk_ros/acceleration_ground_fused", Vector3Stamped, self.accelerationENU_callback)
+        rospy.Subscriber(uav_name + "/spirecv/aruco_detection", TargetsInFrame, self.lookAngle_callback)
 
         # State variables
         self.current_atti = QuaternionStamped()
@@ -53,7 +54,8 @@ class M300:
         self.meAccelerationENUFused = np.zeros(3)
         self.meRPYRadNED = np.zeros(3)
         self.meRPYRadENU = np.zeros(3)
-
+        self.meRPYRadENUDelay = None
+        self.meRPYRadNEDDelay = None
         self.hoverThrottle = rospy.get_param('hoverThrottle')
         self.rollSaturationRad = np.deg2rad(rospy.get_param('rollSaturationDeg'))
         self.pitchSaturationRad = np.deg2rad(rospy.get_param('pitchSaturationDeg'))
@@ -79,6 +81,11 @@ class M300:
         self.current_gimbal_angle.y = msg.vector.x
         self.current_gimbal_angle.z = msg.vector.z
 
+    def lookAngle_callback(self, msg: TargetsInFrame):
+        if len(msg.targets) > 0:
+            self.azimuthAngle = msg.targets[0].los_ax
+            self.elevationAngle = msg.targets[0].los_ay
+            
     def height_callback(self, msg):
         self.current_height = msg
 
