@@ -35,11 +35,6 @@ class M300:
         self.current_height = Float32()
         self.current_vo_pos = VOPosition()
         self.current_local_pos = Point()
-        self.yaw_offset = 0.0
-        self.position_offset = Point()
-        self.EMERGENCY = False
-
-        self.yawRadENU = math.pi / 2
 
         self.flight_status = 255
         self.display_mode = 255
@@ -209,53 +204,54 @@ class M300:
             rospy.logerr("Takeoff finished, but the aircraft is in an unexpected mode. Please connect DJI GO.")
             return False
 
-    def m210_hold_ctrl(self, z=0.0):
+    def hoverAtHeight(self, zENU=0.0):
         control_cmd = Joy()
-        control_cmd.axes = [0, 0, z, 0, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_VELOCITY | DJISDK.Control.HORIZONTAL_VELOCITY | DJISDK.Control.YAW_RATE | DJISDK.Control.HORIZONTAL_BODY]
+        control_cmd.axes = [0, 0, zENU, 0, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_VELOCITY | DJISDK.Control.HORIZONTAL_VELOCITY | DJISDK.Control.YAW_RATE | DJISDK.Control.HORIZONTAL_BODY]
         self.ctrl_cmd_pub.publish(control_cmd)
 
-    def m210_adjust_yaw(self, yaw):
+    def hoverWithYaw(self, yawRadENU):
         control_cmd = Joy()
-        control_cmd.axes = [0, 0, 0, yaw, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_VELOCITY | DJISDK.Control.HORIZONTAL_VELOCITY | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_GROUND]
+        control_cmd.axes = [0, 0, 0, yawRadENU, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_VELOCITY | DJISDK.Control.HORIZONTAL_VELOCITY | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_GROUND]
         self.ctrl_cmd_pub.publish(control_cmd)
 
-    def m210_body_vel_yaw_rate_ctrl(self, x, y, z, yaw_rate):
+    def bodyVelVelYawRate(self, velE, velN, velU, yawRateRad):
         control_cmd = Joy()
-        control_cmd.axes = [x, y, z, yaw_rate, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_VELOCITY | DJISDK.Control.HORIZONTAL_VELOCITY | DJISDK.Control.YAW_RATE | DJISDK.Control.HORIZONTAL_BODY]
+        control_cmd.axes = [velE, velN, velU, yawRateRad, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_VELOCITY | DJISDK.Control.HORIZONTAL_VELOCITY | DJISDK.Control.YAW_RATE | DJISDK.Control.HORIZONTAL_BODY]
         self.ctrl_cmd_pub.publish(control_cmd)
 
-    def m210_velocity_yaw_ctrl(self, vx, vy, vz, yaw):
+    def groundVelVelYaw(self, velE, velN, velU, yawRadENU):
         control_cmd = Joy()
-        control_cmd.axes = [vx, vy, vz, yaw, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_VELOCITY | DJISDK.Control.HORIZONTAL_VELOCITY | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_GROUND]
+        control_cmd.axes = [velE, velN, velU, yawRadENU, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_VELOCITY | DJISDK.Control.HORIZONTAL_VELOCITY | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_GROUND]
         self.ctrl_cmd_pub.publish(control_cmd)
 
-    def velocityENUControl(self, velENU):
-        self.m210_velocity_yaw_ctrl(*velENU.tolist(), self.yawRadENU)
+    def velocityENUControl(self, velENU, yawRadENU):
+        self.groundVelVelYaw(*velENU.tolist(), yawRadENU)
 
-    def m210_velocity_yaw_rate_ctrl(self, vx, vy, vz, yaw_rate):
+    def groundVelVelYawRate(self, velE, velN, velU, yawRateRad):
         control_cmd = Joy()
-        control_cmd.axes = [vx, vy, vz, yaw_rate, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_VELOCITY | DJISDK.Control.HORIZONTAL_VELOCITY | DJISDK.Control.YAW_RATE | DJISDK.Control.HORIZONTAL_GROUND]
+        control_cmd.axes = [velE, velN, velU, yawRateRad, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_VELOCITY | DJISDK.Control.HORIZONTAL_VELOCITY | DJISDK.Control.YAW_RATE | DJISDK.Control.HORIZONTAL_GROUND]
         self.ctrl_cmd_pub.publish(control_cmd)
 
-    def m210_position_yaw_ctrl(self, x, y, z, yaw):
+    def groundPosPosYaw(self, posE, posN, posU, yawRadENU):
         control_cmd = Joy()
-        control_cmd.axes = [x, y, z, yaw, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_POSITION | DJISDK.Control.HORIZONTAL_POSITION | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_GROUND]
+        control_cmd.axes = [posE, posN, posU, yawRadENU, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_POSITION | DJISDK.Control.HORIZONTAL_POSITION | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_GROUND]
         self.ctrl_cmd_pub.publish(control_cmd)
     
-    def positionENUControl(self, posENU):
-        self.m210_position_yaw_ctrl(*posENU.tolist(), self.yawRadENU)
+    def positionENUControl(self, posENU, yawRadENU):
+        self.groundPosPosYaw(*posENU.tolist(), yawRadENU)
 
-    def m210_velocity_position_yaw_ctrl(self, x, y, z, yaw):
+    def groundVelPosYaw(self, velE, velN, posU, yawRadENU):
         control_cmd = Joy()
-        control_cmd.axes = [x, y, z, yaw, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_POSITION | DJISDK.Control.HORIZONTAL_VELOCITY | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_GROUND]
+        control_cmd.axes = [velE, velN, posU, yawRadENU, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_POSITION | DJISDK.Control.HORIZONTAL_VELOCITY | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_GROUND]
         self.ctrl_cmd_pub.publish(control_cmd)
 
-    def m210_position_yaw_rate_ctrl(self, x, y, z, yaw):
+    def groundPosPosYawRate(self, posE, posN, posU, yawRateRad):
         control_cmd = Joy()
-        control_cmd.axes = [x, y, z, yaw, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_POSITION | DJISDK.Control.HORIZONTAL_POSITION | DJISDK.Control.YAW_RATE | DJISDK.Control.HORIZONTAL_GROUND]
+        control_cmd.axes = [posE, posN, posU, yawRateRad, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_POSITION | DJISDK.Control.HORIZONTAL_POSITION | DJISDK.Control.YAW_RATE | DJISDK.Control.HORIZONTAL_GROUND]
         self.ctrl_cmd_pub.publish(control_cmd)
 
     def uav_velocity_yaw_rate_ctrl(self, pos_diff, yaw_diff):
+        KP, YAW_KP = 0.2, 0.2
         vel = Vector3()
         vel.x = pos_diff.x * KP
         vel.y = pos_diff.y * KP
@@ -263,7 +259,7 @@ class M300:
         yaw_rate = yaw_diff * YAW_KP
         self.saturate_vel(vel, Vector3(0.1, 0.1, 0.2))
         rospy.loginfo(f"Velo cmd: {vel}")
-        self.m210_velocity_yaw_rate_ctrl(vel.x, vel.y, vel.z, yaw_rate)
+        self.groundVelVelYawRate(vel.x, vel.y, vel.z, yaw_rate)
 
     def uav_control_to_point_facing_it(self, ctrl_cmd):
         yaw_diff = self.angle2d(self.current_pos_raw, ctrl_cmd) - self.meRPYENU[2]
@@ -282,7 +278,7 @@ class M300:
         self.uav_velocity_yaw_rate_ctrl(self.minus(ctrl_cmd, self.current_pos_raw), yaw_diff)
 
     def uav_control_body(self, ctrl_cmd, yaw_rate=0.0):
-        self.m210_body_vel_yaw_rate_ctrl(ctrl_cmd.x, ctrl_cmd.y, ctrl_cmd.z, yaw_rate)
+        self.bodyVelVelYawRate(ctrl_cmd.x, ctrl_cmd.y, ctrl_cmd.z, yaw_rate)
 
     def send_gimbal_angle_ctrl_cmd(self, roll, pitch, yaw):
         v = Vector3()
@@ -328,14 +324,14 @@ class M300:
     def setAttitudeControlMode(self):
         pass
 
-    def acc2attENUControl(self, accENU):
-        controlThrust, controlEulerENU = self.acceleration2attitude(accENU)
+    def acc2attENUControl(self, accENU, yawRadENU):
+        controlThrust, controlEulerENU = self.acceleration2attitude(accENU, yawRadENU)
         control_cmd = Joy()
         control_cmd.axes = [controlEulerENU[0], controlEulerENU[1], controlThrust, controlEulerENU[2], DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_THRUST | DJISDK.Control.HORIZONTAL_ANGLE | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_BODY]
         self.ctrl_cmd_pub.publish(control_cmd)
 
-    def acceleration2attitude(self, uENU):
-        self.yawNED = 0.0
+    def acceleration2attitude(self, uENU, yawRadENU):
+        self.yawNED = yawRadENU2NED(yawRadENU)
         rollMax = pitchMax = math.radians(30.0)
         self.guidanceCommandNED = enu2ned(uENU)
         print(f"guidanceCommandNED = {pointString(self.guidanceCommandNED)}")
@@ -351,15 +347,10 @@ class M300:
         self.controlEulerNED = np.array([controlRoll, controlPitch, controlYaw])
         print('Expected Euler NED: ' + rpyString(self.controlEulerNED))
         
-        self.controlEulerENU = np.array([controlRoll, -controlPitch, rad_round(math.pi/2 - controlYaw)])
+        self.controlEulerENU = rpyNED2ENU(self.controlEulerNED)
         controlThrust = self.hoverThrottle * abs(liftAcceleration[2] / math.cos(controlRoll) / math.cos(controlPitch) / GRAVITY)
         print(f"controlThrust = {controlThrust}")
         return controlThrust, self.controlEulerENU
-
-    def hover(self):
-        control_cmd = Joy()
-        control_cmd.axes = [0, 0, 0, self.yawRadENU, DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_VELOCITY | DJISDK.Control.HORIZONTAL_VELOCITY | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_GROUND]
-        self.ctrl_cmd_pub.publish(control_cmd)
     
     def sendHeartbeat(self):
         pass

@@ -3,14 +3,14 @@ from GuidanceLaws.GuidanceLawCommon import GuidanceLawCommon
 from Utils import *
 
 class OEHG_test:
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.glc = None
         self.flagTgoInitial = False
         self.omega = 0.057
         self.xNPRange = 10
         self.intVcError = 0.0
         self.tStep = 0.02
-        self.expectedVc = 5.0
+        self.expectedVc = kwargs.get('expectedVc')
         self.kp = 2.0
         self.ki = 2.0
         self.uOEGLos = np.zeros(3)
@@ -34,6 +34,7 @@ class OEHG_test:
         self.uOEGLos[0] = self.kp * vcError + self.ki * self.intVcError
         self.uOEGLos[1] = xNP * self.glc.closeVelocity * losRateLOS[2]
         self.uOEGLos[2] = -xNP * self.glc.closeVelocity * losRateLOS[1]
+        print(f"omega = {self.omega}")
         print(f"close velocity ={self.glc.closeVelocity}" )
         print(f"kp = {self.kp}, ki = {self.ki}")
         print(f"xNP = {xNP}")

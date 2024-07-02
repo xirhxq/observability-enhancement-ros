@@ -116,11 +116,19 @@ def euler2quaternion(attitudeAngle):
 
 
 def rpyENU2NED(rpyRadENU):
-    return np.array([rpyRadENU[0], -rpyRadENU[1], (np.pi / 2 - rpyRadENU[2]) % (2 * np.pi)])
+    return np.array([rpyRadENU[0], -rpyRadENU[1], yawRadENU2NED(rpyRadENU[2])])
 
 
 def rpyNED2ENU(rpyRadNED):
     return rpyENU2NED(rpyRadNED)
+
+
+def yawRadNED2ENU(yawRadNED):
+    return (np.pi / 2 - yawRadNED) % (2 * np.pi)
+
+
+def yawRadENU2NED(yawRadENU):
+    return yawRadNED2ENU(yawRadENU)
 
 
 def pointString(point):

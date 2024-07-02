@@ -65,16 +65,29 @@ class SingleRun:
         self.loopNum = 1
         self.t = 0
         self.nn = 3
-        self.targetState = np.array(
-            [0.0, 60.0, 0.0, 0.0, 0.0, 0.0]  #  3m/s:54m  5m/s:60m  7m/s:80m  9m/s:112.5m
-        )  # target position component in ENU and velocity component in ENU
+
+        vel = kwargs.get('vel')
+        prepareLength = vel * 1.0  #1m/s:0.5m; 2m/s:1.6m; 
+        guidanceLength = kwargs.get('disGuidance')
+        totalLength = prepareLength + guidanceLength
+
+        yawDegNED = kwargs.get('yawDegNED') 
+        self.yawRadNED = np.deg2rad(yawDegNED)
+        self.yawRadENU = yawRadNED2ENU(self.yawRadNED)
+        self.targetState = np.array([
+            totalLength * math.sin(self.yawRadNED),
+            totalLength * math.cos(self.yawRadNED),
+            0,
+            0,
+            0,
+            0
+        ])
         self.uTarget = np.array([0, 0, 0])
-        self.guidanceLaw = None
+
         self.u = None
         self.data = []
         self.z = None
         self.zUse = []
-        self.folderName = None
         self.endControlFlag = 0
         self.real = False
 
@@ -94,8 +107,12 @@ class SingleRun:
 
         self.takeoffHeight = 15.0
         self.takeoffPointENU = np.array([0.0, 0.0, self.takeoffHeight])
-        self.expectedSpeed = 5.0
-        self.initialVelocityENU = np.array([0.0, self.expectedSpeed, 0.0])
+        self.expectedSpeed = vel
+        self.initialVelocityENU = np.array([
+            self.expectedSpeed * math.sin(self.yawRadNED), 
+            self.expectedSpeed * math.cos(self.yawRadNED), 
+            0.0
+        ])
 
         rospy.init_node(self.algorithmName, anonymous=True)
         self.me = M300('suav')
@@ -132,7 +149,7 @@ class SingleRun:
         elif self.guidanceLawName == 'OEHG':
             self.guidanceLaw = OEHG()
         elif self.guidanceLawName == 'OEHG_test':
-            self.guidanceLaw = OEHG_test()
+            self.guidanceLaw = OEHG_test(expectedVc=kwargs.get('vel'))
         else:
             raise ValueError("Invalid guidance law name")
         
@@ -193,29 +210,24 @@ class SingleRun:
         self.toStepTakeoff()
 
     def stepTakeoff(self):
-        self.me.positionENUControl(self.takeoffPointENU)
+        self.me.positionENUControl(self.takeoffPointENU, self.yawRadENU)
         if self.me.nearPositionENU(self.takeoffPointENU) and self.me.nearSpeed(0.0):
             print(f"stepPrepareInitialMePositionNED = {self.me.mePositionNED}")
             print(f"stepPrepareInitialMeVelocityNED = {self.me.meVelocityNED}")
             self.toStepPrepare()
 
     def stepPrepare(self):
-        self.me.velocityENUControl(self.initialVelocityENU)
+        self.me.velocityENUControl(self.initialVelocityENU, self.yawRadENU)
         if self.me.nearSpeed(self.expectedSpeed):
             print(f"stepGuidanceInitialMePositionNED = {self.me.mePositionNED}")
             print(f"stepGuidanceInitialMeVelocityNED = {self.me.meVelocityNED}")
             self.toStepGuidance()
 
     def stepGuidance(self):
-        # if self.loopNum > np.floor(self.timeDelay / self.tStep):
-        #     if (not len(self.data) == 0 ) and (not len(self.data[-1]['measurementUse']) == 0 ):
-        #         self.MeasurementFiltering()
-        #     if np.linalg.norm(self.getRelativePosition()) > 10 and self.endControlFlag == 0:
-        #         self.ekf.newFrame(self.tStep, self.uTarget, self.zUse)
         if self.stateTime >= 100.0:
             self.toStepLand()
-        elif np.linalg.norm(self.getRelativePosition()) <= 1:
-            self.toStepLand()
+        elif np.linalg.norm(self.getRelativePosition()) <= 0.1:
+            self.toStepHover()
         elif self.me.underHeight(0.1):
             self.toStepLand() 
         else:
@@ -223,13 +235,13 @@ class SingleRun:
             if self.loopNum > np.floor(self.timeDelay / self.tStep): 
                 if (not len(self.data) == 0 ) and (not len(self.data[-1]['measurementUse']) == 0 ):
                     self.MeasurementFiltering()
-                if np.linalg.norm(self.getRelativePosition()) > 10 and self.endControlFlag == 0:
-                    self.ekf.newFrame(self.tStep, self.uTarget, self.zUse)
+                self.ekf.newFrame(self.tStep, self.uTarget, self.zUse)
+            print(f"estimate position ENU = {pointString(self.ekf.x[:3])}")
             self.u = self.guidanceLaw.getU(self.getRelativePosition(),
                                         self.getRelativeVelocity(), self.me.getVelocityENU()).reshape(3)
             print(f'uENU = {pointString(self.u)}')
             assert np.all(np.isfinite(self.u)), "u is not finite"
-            self.me.acc2attENUControl(self.u)
+            self.me.acc2attENUControl(self.u, self.yawRadENU)
             self.loopNum += 1
             self.log()
 
@@ -266,7 +278,7 @@ class SingleRun:
             self.me.acc2attENUControl(np.zeros(3))
 
     def stepHover(self):
-        self.me.hover()
+        self.me.hoverWithYaw(self.yawRadENU)
         if self.stateTime >= 5.0:
             self.toStepLand()
 
@@ -455,7 +467,14 @@ class SingleRun:
 
 
 def main(args):
-    sr = SingleRun(GL='OEHG_test', model='useGroundTruth', **vars(args))
+    sr = SingleRun(
+        GL='OEHG_test', 
+        model='useGroundTruth',
+        vel=1.0,
+        yawDegNED=0,
+        disGuidance=20,
+        **vars(args)
+    )
     sr.run()
     rospy.signal_shutdown('Shutting down')
     sr.spinThread.join()
