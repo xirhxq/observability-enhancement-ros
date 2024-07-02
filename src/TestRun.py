@@ -555,6 +555,7 @@ class SingleRun:
         currentData['meRPYNED'] = copy.copy(self.me.meRPYRadNED)
         currentData['cmdRPYENU'] = copy.copy(self.cmdRPYRadENU)
         currentData['cmdRPYNED'] = copy.copy(self.cmdRPYRadNED)
+        currentData['meAccelerationFusedNED'] = copy.copy(enu2ned(self.me.meAccelerationENUFused))
         currentData['meAccelerationNED'] = copy.copy(self.me.getAccelerationNED())
         currentData['meAcceCommandNED'] = copy.copy(self.cmdAccNED)
         currentData['relativePosition'] = copy.copy(self.getRelativePosition())
