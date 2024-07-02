@@ -86,6 +86,9 @@ class SingleRun:
         self.throttleTestMin = rospy.get_param('throttleTestMin')
         self.throttleTestMax = rospy.get_param('throttleTestMax')
 
+        self.useCamera = rospy.get_param('useCamera', False)
+        self.cameraPitch = rospy.get_param('cameraPitch', 0.0)
+
         if self.throttleTestOn:
             self.takeoffHeight = self.throttleTestHeight
         
@@ -451,11 +454,21 @@ class SingleRun:
         self.loopNum += 1
 
     def getMeasurement(self):
-        relPos = self.getRelativePosition(True)
-        self.z = np.array([np.arctan2(relPos[2], np.sqrt(relPos[0] ** 2 + relPos[1] ** 2)),
-                           np.arctan2(relPos[1], relPos[0])]) + np.random.randn() * self.measurementNoise
-        if self.outliers:
-            self.addOutliers()
+        if self.useCamera:
+            lookAngle = self.getLookAngle()
+            LOSdirectionCameraFRD = np.array([1, np.tan(lookAngle[1]), np.tan(lookAngle[0])])/np.linalg.norm(np.array([1, np.tan(lookAngle[1]), np.tan(lookAngle[0])]))
+            LOSdirectionBodyFRD = camera2bodyFRDrotationMatrix(np.deg2rad(self.cameraPitch)) @ LOSdirectionCameraFRD
+            LOSdirectionNED = frd2nedRotationMatrix(self.me.meRPYRadNED) @ LOSdirectionBodyFRD
+            LOSdirectionENU = ned2enu(LOSdirectionNED)
+            self.z = np.array([np.arctan2(LOSdirectionENU[2], np.sqrt(LOSdirectionENU[0] ** 2 + LOSdirectionENU[1] ** 2)),
+                            np.arctan2(LOSdirectionENU[1], LOSdirectionENU[0])])
+        else:
+            relPos = self.getRelativePosition(True)
+            self.z = np.array([np.arctan2(relPos[2], np.sqrt(relPos[0] ** 2 + relPos[1] ** 2)),
+                            np.arctan2(relPos[1], relPos[0])]) + np.random.randn() * self.measurementNoise
+            if self.outliers:
+                self.addOutliers()
+
         if self.loopNum > np.floor(self.timeDelay / self.tStep):
             if self.timeDelay > 0:
                 self.ekf.getMeState(
@@ -508,13 +521,17 @@ class SingleRun:
                               np.linalg.norm(self.getLambda()) ** 2))
     
     def getLookAngle(self):
-        losDirectionNED = enu2ned(self.getRelativePosition(True).flatten()/np.linalg.norm(self.getRelativePosition(True)))
-        print(f"losDirectionNED = {losDirectionNED}")
-        rotationMatrix = ned2frdRotationMatrix(self.me.meRPYRadNED)
-        losDirectionFRD = rotationMatrix @ losDirectionNED
-        print(f"losDirectionFRD = {losDirectionFRD}")
-        elevationAngle = np.arctan2(losDirectionFRD[2], losDirectionFRD[0])
-        azimuthAngle = np.arctan2(losDirectionFRD[1], losDirectionFRD[0])
+        if self.useCamera:
+            elevationAngle = self.me.elevationAngle
+            azimuthAngle = self.me.azimuthAngle
+        else:
+            losDirectionNED = enu2ned(self.getRelativePosition(True).flatten()/np.linalg.norm(self.getRelativePosition(True)))
+            print(f"losDirectionNED = {losDirectionNED}")
+            rotationMatrix = ned2frdRotationMatrix(self.me.meRPYRadNED)
+            losDirectionFRD = rotationMatrix @ losDirectionNED
+            print(f"losDirectionFRD = {losDirectionFRD}")
+            elevationAngle = np.arctan2(losDirectionFRD[2], losDirectionFRD[0])
+            azimuthAngle = np.arctan2(losDirectionFRD[1], losDirectionFRD[0])
         return np.array([elevationAngle, azimuthAngle])
 
     def addOutliers(self):
