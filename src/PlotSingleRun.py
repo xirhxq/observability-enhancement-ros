@@ -178,7 +178,7 @@ class PlotSingleRun:
 
         plt.plot(time, closeVelocity, 'r', linewidth=2.5)
         plt.xlabel('Time (s)', fontsize=12)
-        plt.ylabel('Close velocity (m/s)}', fontsize=12)
+        plt.ylabel('Close velocity (m/s)', fontsize=12)
         plt.savefig(os.path.join(self.folderPath, 'closeVelocity.png'))
         plt.close()
 
@@ -504,14 +504,14 @@ class PlotSingleRun:
         plt.subplot(3, 1, 2)
         plt.plot(time, acceNED[1, :], 'g', linewidth=2, label="Acceleration command E")
         plt.plot(time, acceResponse[1, :], '--', color=[0, 1, 0, 0.5], label="Acceleration response E")
-        plt.ylim(-20,20)
+        # plt.ylim(-20,20)
         plt.legend()
 
         plt.subplot(3, 1, 3)
         plt.plot(time, acceNED[2, :], 'b', linewidth=2, label="Acceleration command D")
         plt.plot(time, acceResponse[2, :], '--', color=[0, 0, 1, 0.5], label="Acceleration response D")
         plt.xlabel('Time (s)')
-        plt.ylim(-20,20)
+        # plt.ylim(-20,20)
         plt.legend()
         
         plt.savefig(os.path.join(self.folderPath, 'AccelerationResponse.png'))
