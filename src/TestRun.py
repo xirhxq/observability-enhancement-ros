@@ -439,7 +439,7 @@ class SingleRun:
     def getLookAngle(self):
         losDirectionNED = enu2ned(self.getRelativePosition(True).flatten()/np.linalg.norm(self.getRelativePosition(True)))
         print(f"losDirectionNED = {losDirectionNED}")
-        rotationMatrix = ned2frdRotationMatrix(self.me.meRPYNED[0], self.me.meRPYNED[1], self.me.meRPYNED[2])
+        rotationMatrix = ned2frdRotationMatrix(self.me.meRPYRadNED)
         losDirectionFRD = rotationMatrix @ losDirectionNED
         print(f"losDirectionFRD = {losDirectionFRD}")
         elevationAngle = np.arctan2(losDirectionFRD[2], losDirectionFRD[0])
@@ -463,8 +463,8 @@ class SingleRun:
         currentData['meVelocity'] = copy.copy(enu2ned(self.me.getVelocityENU()))
         currentData['meVelocityNorm'] = copy.copy(np.linalg.norm(self.me.getVelocityENU()))
         currentData['lookAngle'] = copy.copy(self.getLookAngle())
-        currentData['meRPYENU'] = copy.copy(self.me.meRPYENU)
-        currentData['meRPYNED'] = copy.copy(self.me.meRPYNED)
+        currentData['meRPYENU'] = copy.copy(self.me.meRPYRadENU)
+        currentData['meRPYNED'] = copy.copy(self.me.meRPYRadNED)
         currentData['cmdRPYENU'] = copy.copy(self.cmdRPYRadENU)
         currentData['cmdRPYNED'] = copy.copy(self.cmdRPYRadNED)
         currentData['meAccelerationNED'] = copy.copy(self.me.getAccelerationNED())

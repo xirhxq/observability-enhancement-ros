@@ -49,8 +49,8 @@ class M300:
         self.meAccelerationImuFRD = np.zeros(3)
         self.meAccelerationFRD = np.zeros(3)
         self.meAccelerationFLU = np.zeros(3)
-        self.meRPYNED = np.zeros(3)
-        self.meRPYENU = np.zeros(3)
+        self.meRPYRadNED = np.zeros(3)
+        self.meRPYRadENU = np.zeros(3)
 
         self.hoverThrottle = rospy.get_param('hoverThrottle')
         self.rollSaturationRad = np.deg2rad(rospy.get_param('rollSaturationDeg'))
@@ -63,14 +63,14 @@ class M300:
         print('Acceleration imuFRD: ' + pointString(self.meAccelerationImuFRD))
         print('Acceleration FRD: ' + pointString(self.meAccelerationFRD))
         print('Acceleration NED: ' + pointString(self.meAccelerationNED))
-        print('Euler ENU: ' + rpyString(self.meRPYENU))
-        print('Euler NED: ' + rpyString(self.meRPYNED))
+        print('Euler ENU: ' + rpyString(self.meRPYRadENU))
+        print('Euler NED: ' + rpyString(self.meRPYRadNED))
 
     def attitude_callback(self, msg):
         self.current_atti = msg
         q = [msg.quaternion.w, msg.quaternion.x, msg.quaternion.y, msg.quaternion.z]
-        self.meRPYENU = quaternion2euler(q)
-        self.meRPYNED = rpyENU2NED(self.meRPYENU)
+        self.meRPYRadENU = quaternion2euler(q)
+        self.meRPYRadNED = rpyENU2NED(self.meRPYRadENU)
 
     def gimbal_callback(self, msg):
         self.current_gimbal_angle.x = msg.vector.y
@@ -101,7 +101,7 @@ class M300:
 
     def imu_callback(self, msg: Imu):
         self.meAccelerationImuFRD = np.array([msg.linear_acceleration.x, -msg.linear_acceleration.y, -msg.linear_acceleration.z])
-        self.meAccelerationFRD = frd2nedRotationMatrix(self.meRPYNED[0], self.meRPYNED[1], self.meRPYNED[2]) @ self.meAccelerationImuFRD
+        self.meAccelerationFRD = frd2nedRotationMatrix(self.meRPYRadNED) @ self.meAccelerationImuFRD
         self.meAccelerationNED = self.meAccelerationFRD + np.array([0, 0, GRAVITY])
         self.meAccelerationENU = ned2enu(self.meAccelerationNED)
 
@@ -262,7 +262,7 @@ class M300:
         self.groundVelVelYawRate(vel.x, vel.y, vel.z, yaw_rate)
 
     def uav_control_to_point_facing_it(self, ctrl_cmd):
-        yaw_diff = self.angle2d(self.current_pos_raw, ctrl_cmd) - self.meRPYENU[2]
+        yaw_diff = self.angle2d(self.current_pos_raw, ctrl_cmd) - self.meRPYRadENU[2]
         yaw_diff = self.rad_round(yaw_diff)
         if self.dis2d(ctrl_cmd, self.current_pos_raw) <= 1:
             yaw_diff = 0
@@ -270,7 +270,7 @@ class M300:
         self.uav_velocity_yaw_rate_ctrl(self.minus(ctrl_cmd, self.current_pos_raw), yaw_diff)
 
     def uav_control_to_point_with_yaw(self, ctrl_cmd, yaw):
-        yaw_diff = yaw - self.meRPYENU[2]
+        yaw_diff = yaw - self.meRPYRadENU[2]
         yaw_diff = self.rad_round(yaw_diff)
         if self.dis2d(ctrl_cmd, self.current_pos_raw) <= 1:
             yaw_diff = 0

@@ -13,7 +13,10 @@ CLEAR = "\033[2J"
 STD_SHAPE = (3,)
 GRAVITY = 9.81
 
-def ned2frdRotationMatrix(rollAngle, pitchAngle, yawAngle):
+def ned2frdRotationMatrix(rpyRadNED):
+    rollAngle = rpyRadNED[0]
+    pitchAngle = rpyRadNED[1]
+    yawAngle = rpyRadNED[2]
     R_z = np.array([
             [np.cos(yawAngle), np.sin(yawAngle), 0],
             [np.sin(yawAngle), np.cos(yawAngle), 0],
@@ -35,10 +38,8 @@ def ned2frdRotationMatrix(rollAngle, pitchAngle, yawAngle):
     ned2frdRotationMatrix = np.dot(R_x, np.dot(R_y, R_z))
     return ned2frdRotationMatrix
 
-def frd2nedRotationMatrix(rollAngle, pitchAngle, yawAngle):
-
-    R = np.linalg.inv(ned2frdRotationMatrix(rollAngle, pitchAngle, yawAngle))
-    
+def frd2nedRotationMatrix(rpyRadNED):
+    R = np.linalg.inv(ned2frdRotationMatrix(rpyRadNED))
     return R
 
 def enu2losRotationMatrix(yAxisRotationAngle, zAxisRotationAngle):
