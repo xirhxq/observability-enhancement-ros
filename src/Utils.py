@@ -140,3 +140,21 @@ def rpyString(rpyRad):
     assert len(rpyRad) == 3, f'Length of rpy should be 3, but get {len(rpyRad)}'
     rpyDeg = 180 / np.pi * rpyRad
     return f'(roll: {rpyDeg[0]:.2f}, pitch: {rpyDeg[1]:.2f}, yaw: {rpyDeg[2]:.2f})'
+
+
+def accENUYawENU2EulerENUThrust(accENU, yawRadENU, hoverThrottle):
+    yawRadNED = yawRadENU2NED(yawRadENU)
+    accNED = enu2ned(accENU)
+
+    liftAcc = -(accNED - np.array([0, 0, GRAVITY]))
+    
+    r1 = math.cos(yawRadNED) * liftAcc[0] + math.sin(yawRadNED) * liftAcc[1]
+    r2 = math.sin(yawRadNED) * liftAcc[0] - math.cos(yawRadNED) * liftAcc[1]
+    pitchRad = math.atan2(r1, liftAcc[2])
+    r3 = math.sin(pitchRad) * r1 + math.cos(pitchRad) * liftAcc[2]
+    rollRad = math.atan2(r2, r3)
+    controlEulerNED = np.array([rollRad, pitchRad, yawRadNED])
+    
+    eulerRadENU = rpyNED2ENU(controlEulerNED)
+    thrust = hoverThrottle * abs(liftAcc[2] / math.cos(rollRad) / math.cos(pitchRad) / GRAVITY)
+    return thrust, eulerRadENU

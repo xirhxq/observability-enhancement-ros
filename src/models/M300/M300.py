@@ -54,9 +54,6 @@ class M300:
 
         self.hoverThrottle = 31.5
 
-        self.controlEulerNED = np.zeros(3)
-        self.controlEulerENU = np.zeros(3)
-
     def printMe(self):
         print('-' * 10 + 'Me' + '-' * 10)
         print('Position NED: ' + pointString(self.mePositionNED))
@@ -325,33 +322,10 @@ class M300:
     def setAttitudeControlMode(self):
         pass
 
-    def acc2attENUControl(self, accENU, yawRadENU):
-        controlThrust, controlEulerENU = self.acceleration2attitude(accENU, yawRadENU)
+    def acc2attENUControl(self, thrust, rpyRadENU):
         control_cmd = Joy()
-        control_cmd.axes = [controlEulerENU[0], controlEulerENU[1], controlThrust, controlEulerENU[2], DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_THRUST | DJISDK.Control.HORIZONTAL_ANGLE | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_BODY]
+        control_cmd.axes = [rpyRadENU[0], rpyRadENU[1], thrust, rpyRadENU[2], DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_THRUST | DJISDK.Control.HORIZONTAL_ANGLE | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_BODY]
         self.ctrl_cmd_pub.publish(control_cmd)
-
-    def acceleration2attitude(self, uENU, yawRadENU):
-        self.yawNED = yawRadENU2NED(yawRadENU)
-        rollMax = pitchMax = math.radians(30.0)
-        self.guidanceCommandNED = enu2ned(uENU)
-        print(f"guidanceCommandNED = {pointString(self.guidanceCommandNED)}")
-        liftAcceleration = -(self.guidanceCommandNED - np.array([0, 0, GRAVITY]))
-        r1 = math.cos(self.yawNED) * liftAcceleration[0] + math.sin(self.yawNED) * liftAcceleration[1]
-        r2 = math.sin(self.yawNED) * liftAcceleration[0] - math.cos(self.yawNED) * liftAcceleration[1]
-        pitch = math.atan2(r1, liftAcceleration[2])
-        r3 = math.sin(pitch) * r1 + math.cos(pitch) * liftAcceleration[2]
-        roll = math.atan2(r2, r3)
-        controlYaw = self.yawNED
-        controlPitch = max(-pitchMax, min(pitch, pitchMax))
-        controlRoll = max(-rollMax, min(roll, rollMax))
-        self.controlEulerNED = np.array([controlRoll, controlPitch, controlYaw])
-        print('Expected Euler NED: ' + rpyString(self.controlEulerNED))
-        
-        self.controlEulerENU = rpyNED2ENU(self.controlEulerNED)
-        controlThrust = self.hoverThrottle * abs(liftAcceleration[2] / math.cos(controlRoll) / math.cos(controlPitch) / GRAVITY)
-        print(f"controlThrust = {controlThrust}")
-        return controlThrust, self.controlEulerENU
     
     def sendHeartbeat(self):
         pass

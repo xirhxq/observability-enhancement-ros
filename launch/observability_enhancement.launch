@@ -18,7 +18,6 @@
     <arg name="timeDelay" default="0.0"/>
 
     <param name="GL" value="$(arg GL)"/>
-    <param name="model" value="$(arg model)"/>
     <param name="expectedSpeed" value="$(arg expectedSpeed)"/>
     <param name="takeoffHeight" value="$(arg takeoffHeight)"/>
     <param name="yawDegNED" value="$(arg yawDegNED)"/>

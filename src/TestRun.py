@@ -64,7 +64,7 @@ class SingleRun:
         self.expectedSpeed = rospy.get_param('expectedSpeed')
         self.takeoffHeight = rospy.get_param('takeoffHeight')
         self.yawDegNED = rospy.get_param('yawDegNED')
-        self.guidanceLength = rospy.get_param('disGuidance')
+        self.guidanceLength = rospy.get_param('guidanceLength')
         self.reallyTakeoff = rospy.get_param('takeoff', False) == True
         self.tStep = rospy.get_param('tStep', 0.02)
         self.tUpperLimit = rospy.get_param('tUpperLimit', 100)
@@ -103,6 +103,10 @@ class SingleRun:
             self.expectedSpeed * np.cos(self.yawRadNED), 
             0.0
         ])
+
+        self.cmdAccNED = np.zeros(3)
+        self.cmdRPYRadENU = np.zeros(3)
+        self.cmdRPYRadNED = np.zeros(3)
 
         rospy.init_node(self.algorithmName, anonymous=True)
         self.me = M300('suav')
@@ -256,11 +260,23 @@ class SingleRun:
                     self.MeasurementFiltering()
                 self.ekf.newFrame(self.tStep, self.uTarget, self.zUse)
             print(f"estimate position ENU = {pointString(self.ekf.x[:3])}")
-            self.u = self.guidanceLaw.getU(self.getRelativePosition(),
-                                        self.getRelativeVelocity(), self.me.getVelocityENU()).reshape(3)
+            self.u = self.guidanceLaw.getU(
+                        self.getRelativePosition(),
+                        self.getRelativeVelocity(), 
+                        self.me.getVelocityENU()
+                    ).reshape(3)
             print(f'uENU = {pointString(self.u)}')
             assert np.all(np.isfinite(self.u)), "u is not finite"
-            self.me.acc2attENUControl(self.u, self.yawRadENU)
+            
+            self.cmdAccNED = enu2ned(self.u)
+            thrust, self.cmdRPYRadENU = accENUYawENU2EulerENUThrust(
+                accENU=self.u, 
+                yawRadENU=self.yawRadENU, 
+                hoverThrottle=self.me.hoverThrottle
+            )
+            self.cmdRPYRadNED = rpyENU2NED(self.cmdRPYRadENU)
+            self.me.acc2attENUControl(thrust, self.cmdRPYRadENU)
+
             self.loopNum += 1
             self.log()
 
@@ -449,10 +465,10 @@ class SingleRun:
         currentData['lookAngle'] = copy.copy(self.getLookAngle())
         currentData['meRPYENU'] = copy.copy(self.me.meRPYENU)
         currentData['meRPYNED'] = copy.copy(self.me.meRPYNED)
-        currentData['cmdRPYENU'] = copy.copy(self.me.controlEulerENU)
-        currentData['cmdRPYNED'] = copy.copy(self.me.controlEulerNED)
+        currentData['cmdRPYENU'] = copy.copy(self.cmdRPYRadENU)
+        currentData['cmdRPYNED'] = copy.copy(self.cmdRPYRadNED)
         currentData['meAccelerationNED'] = copy.copy(self.me.getAccelerationNED())
-        currentData['meAcceCommandNED'] = copy.copy(self.me.guidanceCommandNED)
+        currentData['meAcceCommandNED'] = copy.copy(self.cmdAccNED)
         currentData['relativePosition'] = copy.copy(self.getRelativePosition())
         currentData['relativeDistance'] = copy.copy(np.linalg.norm(self.getRelativePosition()))
         currentData['relativeVelocity'] = copy.copy(self.getRelativeVelocity())
