@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-import argparse
 import copy
 import datetime
+import json
 import os
 import pickle
 import sys
@@ -57,24 +57,29 @@ def stepEntrance(method):
 
 class SingleRun:
     def __init__(self, **kwargs):
+        rospy.init_node('observability_enhancement', anonymous=True)
         self.algorithmName = 'observability_enhancement'
-        self.guidanceLawName = kwargs.get('GL', 'PN')
-        self.model = kwargs.get('model', 'useFixedWingModel')
-        self.monteCarlo = kwargs.get('monteCarlo', False)
-        self.tStep = 0.02
-        self.tUpperLimit = 100
+
+        self.guidanceLawName = rospy.get_param('GL', 'PN')
+        self.model = rospy.get_param('model', 'useFixedWingModel')
+        self.expectedSpeed = rospy.get_param('expectedSpeed')
+        self.takeoffHeight = rospy.get_param('takeoffHeight')
+        self.yawDegNED = rospy.get_param('yawDegNED')
+        self.guidanceLength = rospy.get_param('disGuidance')
+        self.reallyTakeoff = rospy.get_param('takeoff', False) == True
+        self.tStep = rospy.get_param('tStep', 0.02)
+        self.tUpperLimit = rospy.get_param('tUpperLimit', 100)
+        self.outliers = rospy.get_param('outliers', False)
+        self.timeDelay = rospy.get_param('timeDelay', 0.0)
+        
         self.loopNum = 1
         self.t = 0
         self.nn = 3
 
-        vel = kwargs.get('vel')
-        guidanceLength = kwargs.get('disGuidance')
-
-        yawDegNED = kwargs.get('yawDegNED') 
-        self.yawRadNED = np.deg2rad(yawDegNED)
+        self.yawRadNED = np.deg2rad(self.yawDegNED)
         self.yawRadENU = yawRadNED2ENU(self.yawRadNED)
         self.unitVector = np.array([math.sin(self.yawRadNED), math.cos(self.yawRadNED)])
-        self.targetState = np.concatenate([guidanceLength * self.unitVector, np.zeros(4)])
+        self.targetState = np.concatenate([self.guidanceLength * self.unitVector, np.zeros(4)])
         self.uTarget = np.array([0, 0, 0])
 
         self.u = None
@@ -84,11 +89,6 @@ class SingleRun:
         self.endControlFlag = 0
         self.real = False
 
-        timeStr = kwargs.get('prefix', datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
-        suffixConditionStr = f"v{kwargs.get('vel'):.0f}h{kwargs.get('height'):.0f}"
-
-        self.outliers = kwargs.get('outliers', False)
-        self.timeDelay = kwargs.get('timeDelay', 0.0)
         self.measurementNoise = np.deg2rad(0.5)
 
         self.state = State.INIT
@@ -97,14 +97,11 @@ class SingleRun:
         self.taskTime = 0
         self.stateTime = 0
 
-        self.reallyTakeoff = kwargs.get('takeoff', False)
-
-        self.takeoffPointENU = np.array([0, 0, kwargs.get('height')])
-        self.preparePointENU = np.concatenate([-self.unitVector * 20, np.array([kwargs.get('height')])])
-        self.expectedSpeed = vel
+        self.takeoffPointENU = np.array([0, 0, self.takeoffHeight])
+        self.preparePointENU = np.concatenate([-self.unitVector * self.guidanceLength, np.array([self.takeoffHeight])])
         self.initialVelocityENU = np.array([
-            self.expectedSpeed * math.sin(self.yawRadNED), 
-            self.expectedSpeed * math.cos(self.yawRadNED), 
+            self.expectedSpeed * np.sin(self.yawRadNED), 
+            self.expectedSpeed * np.cos(self.yawRadNED), 
             0.0
         ])
 
@@ -115,10 +112,11 @@ class SingleRun:
 
         rospack = rospkg.RosPack()
         self.packagePath = rospack.get_path(self.algorithmName)
+        self.timeStr = kwargs.get('prefix', datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
         self.folderName = os.path.join(
             self.packagePath, 
             'data', 
-            timeStr + suffixConditionStr, 
+            self.timeStr, 
             self.guidanceLawName
         )
         os.makedirs(self.folderName, exist_ok=True)
@@ -148,12 +146,30 @@ class SingleRun:
         elif self.guidanceLawName == 'OEHG':
             self.guidanceLaw = OEHG()
         elif self.guidanceLawName == 'OEHG_test':
-            self.guidanceLaw = OEHG_test(expectedVc=kwargs.get('vel'))
+            self.guidanceLaw = OEHG_test(expectedVc=self.expectedSpeed)
         else:
             raise ValueError("Invalid guidance law name")
         
-        print(f"Simulation Condition: takeoffHeight = {kwargs.get('height')}, expectedSpeed = {self.expectedSpeed}, targetState = {self.targetState}")
+        print(f"Simulation Condition: takeoffHeight = {self.takeoffHeight}, expectedSpeed = {self.expectedSpeed}, targetState = {self.targetState}")
         print(f"GL: {self.guidanceLawName}")
+
+        # Save parameters to file
+        params = {
+            'GL': self.guidanceLawName,
+            'model': self.model,
+            'expectedSpeed': self.expectedSpeed,
+            'takeoffHeight': self.takeoffHeight,
+            'yawDegNED': self.yawDegNED,
+            'guidanceLength': self.guidanceLength,
+            'takeoff': self.reallyTakeoff,
+            'tStep': self.tStep,
+            'tUpperLimit': self.tUpperLimit,
+            'outliers': self.outliers,
+            'timeDelay': self.timeDelay
+        }
+
+        with open(os.path.join(self.folderName, 'params.json'), 'w') as f:
+            json.dump(params, f, indent=4)
 
     def getTimeNow(self):
         return time.time()
@@ -481,16 +497,8 @@ class SingleRun:
         self.data.append(currentData)
 
 
-def main(args):
-    sr = SingleRun(
-        GL='OEHG_test', 
-        model='useGroundTruth',
-        vel=8.0,
-        height=5.0,
-        yawDegNED=40,
-        disGuidance=20,
-        **vars(args)
-    )
+def main():
+    sr = SingleRun()
     sr.run()
     rospy.signal_shutdown('Shutting down')
     sr.spinThread.join()
@@ -509,11 +517,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='ROS node with command line parameters')
-    parser.add_argument('--takeoff', action='store_true', help='explicit takeoff command')
-
-    args = parser.parse_args()
-
-    print(args)
-
-    main(args)
+    main()

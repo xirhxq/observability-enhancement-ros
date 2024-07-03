@@ -1,0 +1,36 @@
+<launch>
+    <!-- Guidance Law Choice -->
+    <arg name="GL" default="OEHG_test"/>
+
+    <!-- Model Choice -->
+    <arg name="model" default="useGroundTruth"/>
+
+    <!-- Core arguments -->
+    <arg name="expectedSpeed" default="1.0"/>
+    <arg name="takeoffHeight" default="10.0"/>
+    <arg name="yawDegNED" default="0.0"/>
+    <arg name="guidanceLength" default="20.0"/>
+
+    <!-- TAKEOFF OR NOT -->
+    <arg name="takeoff" default="false"/>
+
+    <arg name="tStep" default="0.02"/>
+    <arg name="tUpperLimit" default="100"/>
+
+    <arg name="outliers" default="false"/>
+    <arg name="timeDelay" default="0.0"/>
+
+    <param name="GL" value="$(arg GL)"/>
+    <param name="model" value="$(arg model)"/>
+    <param name="expectedSpeed" value="$(arg expectedSpeed)"/>
+    <param name="takeoffHeight" value="$(arg takeoffHeight)"/>
+    <param name="yawDegNED" value="$(arg yawDegNED)"/>
+    <param name="guidanceLength" value="$(arg guidanceLength)"/>
+    <param name="takeoff" value="$(arg takeoff)"/>
+    <param name="tStep" value="$(arg tStep)"/>
+    <param name="tUpperLimit" value="$(arg tUpperLimit)"/>
+    <param name="outliers" value="$(arg outliers)"/>
+    <param name="timeDelay" value="$(arg timeDelay)"/>
+
+    <node name="observability_enhancement" pkg="observability_enhancement" type="TestRun.py" output="screen"/>
+</launch>
