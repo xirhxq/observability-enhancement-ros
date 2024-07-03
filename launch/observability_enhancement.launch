@@ -15,18 +15,27 @@
 
     <!-- Safety Module arguments -->
     <arg name="safetyMinHeight" default="3"/>
-    <arg name="safetyMaxHeight" default="30"/>
+    <arg name="safetyMaxHeight" default="40"/>
     <arg name="safetyMinDescendHeight" default="5"/>
     <arg name="safetyMaxDescendVelocity" default="2"/>
 
     <!-- TAKEOFF OR NOT -->
     <arg name="takeoff" default="false"/>
 
+    <!-- Execution arguments -->
     <arg name="tStep" default="0.02"/>
     <arg name="tUpperLimit" default="100"/>
 
+    <!-- Measurement arguments -->
     <arg name="outliers" default="false"/>
     <arg name="timeDelay" default="0.0"/>
+
+    <!-- Throttle Test arguments -->
+    <arg name="throttleTestOn" default="false"/>
+    <arg name="throttleTestHeight" default="20"/>
+    <arg name="throttleTestChangeTime" default="0.5"/>
+    <arg name="throttleTestMin" default="20.0"/>
+    <arg name="throttleTestMax" default="50.0"/>
 
     <param name="GL" value="$(arg GL)"/>
 
@@ -51,6 +60,12 @@
 
     <param name="outliers" value="$(arg outliers)"/>
     <param name="timeDelay" value="$(arg timeDelay)"/>
+
+    <param name="throttleTestOn" value="$(arg throttleTestOn)"/>
+    <param name="throttleTestHeight" value="$(arg throttleTestHeight)"/>
+    <param name="throttleTestChangeTime" value="$(arg throttleTestChangeTime)"/>
+    <param name="throttleTestMin" value="$(arg throttleTestMin)"/>
+    <param name="throttleTestMax" value="$(arg throttleTestMax)"/>
 
     <node name="observability_enhancement" pkg="observability_enhancement" type="TestRun.py" output="screen"/>
 </launch>

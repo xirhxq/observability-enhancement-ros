@@ -77,8 +77,17 @@ class SingleRun:
         self.tStep = rospy.get_param('tStep', 0.02)
         self.tUpperLimit = rospy.get_param('tUpperLimit', 100)
 
-        self.outliers = rospy.get_param('outliers', False)
+        self.outliers = rospy.get_param('outliers', False) == True
         self.timeDelay = rospy.get_param('timeDelay', 0.0)
+
+        self.throttleTestOn = rospy.get_param('throttleTestOn') == True
+        self.throttleTestHeight = rospy.get_param('throttleTestHeight')
+        self.throttleTestChangeTime = rospy.get_param('throttleTestChangeTime')
+        self.throttleTestMin = rospy.get_param('throttleTestMin')
+        self.throttleTestMax = rospy.get_param('throttleTestMax')
+
+        if self.throttleTestOn:
+            self.takeoffHeight = self.throttleTestHeight
         
         self.loopNum = 1
         self.t = 0
@@ -216,10 +225,12 @@ class SingleRun:
     @stepEntrance
     def toStepThrottleTest(self):
         self.state = State.THROTTLE_TEST
-        self.throttleMin = 31.4
-        self.throttleMax = 31.6
+        self.throttleMin = self.throttleTestMin
+        self.throttleMax = self.throttleTestMax
         self.throttle = (self.throttleMax + self.throttleMin) / 2.0
-        self.changeTime = 10.0
+        self.changeTime = self.throttleTestChangeTime
+        self.changeStep = self.throttleTestChangeTime
+        self.throttleTestAdjustPosition = False
 
     @stepEntrance
     def toStepHover(self):
@@ -245,7 +256,10 @@ class SingleRun:
         print(f'{self.takeoffPointENU = }')
         print(f'{self.me.distanceToPointENU(self.takeoffPointENU) = }')
         if self.me.nearPositionENU(self.takeoffPointENU) and self.me.nearSpeed(0):
-            self.toStepPrepare()
+            if self.throttleTestOn:
+                self.toStepThrottleTest()
+            else:
+                self.toStepPrepare()
 
     def stepPrepare(self):
         self.me.positionENUControl(self.preparePointENU, self.yawRadENU)
@@ -311,24 +325,51 @@ class SingleRun:
     def stepThrottleTest(self):
         if self.stateTime >= 100.0:
             self.toStepLand()
-        elif np.linalg.norm(self.getRelativePosition()) <= 1:
+            return
+        
+        if not self.safetyModule():
             self.toStepLand()
-        elif self.me.underHeight(0.1):
-            self.toStepLand() 
-        else:
-            self.throttle = (self.throttleMin + self.throttleMax) / 2.0
-            self.me.hoverThrottle = self.throttle
-            print(f'{self.me.hoverThrottle = }')
-            if self.stateTime >= self.changeTime:
-                if self.me.meAccelerationNED[2] > 0:
-                    self.throttleMin = self.throttle
-                else:
-                    self.throttleMax = self.throttle
-                self.changeTime += 10.0
-                    
-            if self.throttleMax - self.throttleMin < 0.01:
-                self.toStepLand()
-            self.me.acc2attENUControl(np.zeros(3))
+            return
+        
+        if not self.me.nearPositionENU(self.takeoffPointENU, tol=10):
+            self.throttleTestAdjustPosition = True
+        
+        if self.me.nearPositionENU(self.takeoffPointENU) and self.me.nearSpeed(0):
+            self.throttleTestAdjustPosition = False
+        
+        if self.throttleTestAdjustPosition:
+            print('ADJUSTING POSITION!!!')
+            self.me.positionENUControl(self.takeoffPointENU, self.yawRadENU)
+            print(f'{self.me.mePositionENU = }')
+            print(f'{self.takeoffPointENU = }')
+            print(f'{self.me.distanceToPointENU(self.takeoffPointENU) = }')
+        
+        self.throttle = (self.throttleMin + self.throttleMax) / 2.0
+        print(f'Between {self.throttleMin:.3f} and {self.throttleMax:.3f}: try {self.throttle:.3f}')
+        print(f'{self.me.meAccelerationENUFused[2] = }')
+        if self.stateTime >= self.changeTime:
+            if self.me.meAccelerationENUFused[2] < 0:
+                self.throttleMin = self.throttle
+            else:
+                self.throttleMax = self.throttle
+            self.changeTime += self.changeStep
+                
+        if self.throttleMax - self.throttleMin < 0.01:
+            print(f'Throttle test result: between {self.throttleMin} and {self.throttleMax}')
+            self.toStepLand()
+            return
+
+        if self.throttleMax - self.throttleTestMin < 0.5:
+            print(f'Throttle test failed: range to high')
+            self.toStepLand()
+            return
+
+        if self.throttleTestMax - self.throttleMin < 0.5:
+            print(f'Throttle test failed: range to low')
+            self.toStepLand()
+            return
+
+        self.me.acc2attENUControl(self.throttle, np.array([0.0, 0.0, self.yawRadENU]))
 
     def stepHover(self):
         self.me.hoverWithYaw(self.yawRadENU)

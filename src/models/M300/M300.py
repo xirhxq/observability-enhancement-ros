@@ -27,6 +27,7 @@ class M300:
         rospy.Subscriber(uav_name + "/dji_osdk_ros/local_position", PointStamped, self.local_position_callback)
         rospy.Subscriber(uav_name + "/dji_osdk_ros/velocity", Vector3Stamped, self.velocity_callback)
         rospy.Subscriber(uav_name + "/dji_osdk_ros/imu", Imu, self.imu_callback)
+        rospy.Subscriber(uav_name + "/dji_osdk_ros/acceleration_ground_fused", Vector3Stamped, self.accelerationENU_callback)
 
         # State variables
         self.current_atti = QuaternionStamped()
@@ -49,6 +50,7 @@ class M300:
         self.meAccelerationImuFRD = np.zeros(3)
         self.meAccelerationFRD = np.zeros(3)
         self.meAccelerationFLU = np.zeros(3)
+        self.meAccelerationENUFused = np.zeros(3)
         self.meRPYRadNED = np.zeros(3)
         self.meRPYRadENU = np.zeros(3)
 
@@ -105,6 +107,8 @@ class M300:
         self.meAccelerationNED = self.meAccelerationFRD + np.array([0, 0, GRAVITY])
         self.meAccelerationENU = ned2enu(self.meAccelerationNED)
 
+    def accelerationENU_callback(self, msg: Vector3Stamped):
+        self.meAccelerationENUFused = np.array([msg.vector.x, msg.vector.y, msg.vector.z])
 
     def takeoff_land(self, task):
         # rospy.wait_for_service(self.drone_task_service.resolved_name)
