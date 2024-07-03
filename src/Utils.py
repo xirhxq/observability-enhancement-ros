@@ -19,7 +19,7 @@ def ned2frdRotationMatrix(rpyRadNED):
     yawAngle = rpyRadNED[2]
     R_z = np.array([
             [np.cos(yawAngle), np.sin(yawAngle), 0],
-            [np.sin(yawAngle), np.cos(yawAngle), 0],
+            [-np.sin(yawAngle), np.cos(yawAngle), 0],
             [0, 0, 1]
         ])
         
