@@ -35,7 +35,7 @@ def ned2frdRotationMatrix(rpyRadNED):
             [0, -np.sin(rollAngle), np.cos(rollAngle)]
         ])
 
-    ned2frdRotationMatrix = np.dot(R_x, np.dot(R_y, R_z))
+    ned2frdRotationMatrix = R_x @ R_y @ R_z
     return ned2frdRotationMatrix
 
 def frd2nedRotationMatrix(rpyRadNED):
