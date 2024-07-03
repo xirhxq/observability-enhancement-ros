@@ -13,6 +13,12 @@
     <arg name="rollSaturationDeg" default="10"/>
     <arg name="pitchSaturationDeg" default="10"/>
 
+    <!-- Safety Module arguments -->
+    <arg name="safetyMinHeight" default="3"/>
+    <arg name="safetyMaxHeight" default="30"/>
+    <arg name="safetyMinDescendHeight" default="5"/>
+    <arg name="safetyMaxDescendVelocity" default="2"/>
+
     <!-- TAKEOFF OR NOT -->
     <arg name="takeoff" default="false"/>
 
@@ -23,16 +29,26 @@
     <arg name="timeDelay" default="0.0"/>
 
     <param name="GL" value="$(arg GL)"/>
+
     <param name="expectedSpeed" value="$(arg expectedSpeed)"/>
     <param name="takeoffHeight" value="$(arg takeoffHeight)"/>
     <param name="yawDegNED" value="$(arg yawDegNED)"/>
     <param name="guidanceLength" value="$(arg guidanceLength)"/>
+
     <param name="hoverThrottle" value="$(arg hoverThrottle)"/>
     <param name="rollSaturationDeg" value="$(arg rollSaturationDeg)"/>
     <param name="pitchSaturationDeg" value="$(arg pitchSaturationDeg)"/>
+
+    <param name="safetyMinHeight" value="$(arg safetyMinHeight)"/>
+    <param name="safetyMaxHeight" value="$(arg safetyMaxHeight)"/>
+    <param name="safetyMinDescendHeight" value="$(arg safetyMinDescendHeight)"/>
+    <param name="safetyMaxDescendVelocity" value="$(arg safetyMaxDescendVelocity)"/>
+
     <param name="takeoff" value="$(arg takeoff)"/>
+
     <param name="tStep" value="$(arg tStep)"/>
     <param name="tUpperLimit" value="$(arg tUpperLimit)"/>
+
     <param name="outliers" value="$(arg outliers)"/>
     <param name="timeDelay" value="$(arg timeDelay)"/>
 

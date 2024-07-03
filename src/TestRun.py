@@ -61,13 +61,22 @@ class SingleRun:
         self.algorithmName = 'observability_enhancement'
 
         self.guidanceLawName = rospy.get_param('GL', 'PN')
+
         self.expectedSpeed = rospy.get_param('expectedSpeed')
         self.takeoffHeight = rospy.get_param('takeoffHeight')
         self.yawDegNED = rospy.get_param('yawDegNED')
         self.guidanceLength = rospy.get_param('guidanceLength')
+
+        self.safetyMinHeight = rospy.get_param('safetyMinHeight')
+        self.safetyMaxHeight = rospy.get_param('safetyMaxHeight')
+        self.safetyMinDescendHeight = rospy.get_param('safetyMinDescendHeight')
+        self.safetyMaxDescendVelocity = rospy.get_param('safetyMaxDescendVelocity')
+
         self.reallyTakeoff = rospy.get_param('takeoff', False) == True
+
         self.tStep = rospy.get_param('tStep', 0.02)
         self.tUpperLimit = rospy.get_param('tUpperLimit', 100)
+
         self.outliers = rospy.get_param('outliers', False)
         self.timeDelay = rospy.get_param('timeDelay', 0.0)
         
@@ -249,36 +258,45 @@ class SingleRun:
     def stepGuidance(self):
         if self.stateTime >= 100.0:
             self.toStepLand()
-        elif np.linalg.norm(self.getRelativePosition()) <= 0.1:
+            return
+        
+        if np.linalg.norm(self.getRelativePosition()) <= 0.1:
             self.toStepHover()
-        elif self.me.underHeight(0.1):
+            return
+        
+        if self.me.underHeight(0.1):
             self.toStepLand() 
-        else:
-            self.getMeasurement()
-            if self.loopNum > np.floor(self.timeDelay / self.tStep): 
-                if (not len(self.data) == 0 ) and (not len(self.data[-1]['measurementUse']) == 0 ):
-                    self.MeasurementFiltering()
-                self.ekf.newFrame(self.tStep, self.uTarget, self.zUse)
-            print(f"estimate position ENU = {pointString(self.ekf.x[:3])}")
-            self.u = self.guidanceLaw.getU(
-                        self.getRelativePosition(),
-                        self.getRelativeVelocity(), 
-                        self.me.getVelocityENU()
-                    ).reshape(3)
-            print(f'uENU = {pointString(self.u)}')
-            assert np.all(np.isfinite(self.u)), "u is not finite"
-            
-            self.cmdAccNED = enu2ned(self.u)
-            thrust, self.cmdRPYRadENU = accENUYawENU2EulerENUThrust(
-                accENU=self.u, 
-                yawRadENU=self.yawRadENU, 
-                hoverThrottle=self.me.hoverThrottle
-            )
-            self.cmdRPYRadNED = rpyENU2NED(self.cmdRPYRadENU)
-            self.me.acc2attENUControl(thrust, self.cmdRPYRadENU)
+            return
 
-            self.loopNum += 1
-            self.log()
+        if not self.safetyModule():
+            self.toStepLand()
+            return
+            
+        self.getMeasurement()
+        if self.loopNum > np.floor(self.timeDelay / self.tStep): 
+            if (not len(self.data) == 0 ) and (not len(self.data[-1]['measurementUse']) == 0 ):
+                self.MeasurementFiltering()
+            self.ekf.newFrame(self.tStep, self.uTarget, self.zUse)
+        print(f"estimate position ENU = {pointString(self.ekf.x[:3])}")
+        self.u = self.guidanceLaw.getU(
+                    self.getRelativePosition(),
+                    self.getRelativeVelocity(), 
+                    self.me.getVelocityENU()
+                ).reshape(3)
+        print(f'uENU = {pointString(self.u)}')
+        assert np.all(np.isfinite(self.u)), "u is not finite"
+        
+        self.cmdAccNED = enu2ned(self.u)
+        thrust, self.cmdRPYRadENU = accENUYawENU2EulerENUThrust(
+            accENU=self.u, 
+            yawRadENU=self.yawRadENU, 
+            hoverThrottle=self.me.hoverThrottle
+        )
+        self.cmdRPYRadNED = rpyENU2NED(self.cmdRPYRadENU)
+        self.me.acc2attENUControl(thrust, self.cmdRPYRadENU)
+
+        self.loopNum += 1
+        self.log()
 
     def stepBack(self):
         self.me.positionENUControl(self.takeoffPointENU, self.yawRadENU)
@@ -353,6 +371,18 @@ class SingleRun:
         print(f'Total time: {self.taskTime:.2f}, state time: {self.stateTime:.2f}')
         # print(f'Armed: {"YES" if self.me.isArmed() else "NO"}({self.me.status.arming_state})')
         self.me.printMe()
+
+    def safetyModule(self):
+        if self.me.underHeight(self.safetyMinHeight):
+            print('Safety module: too low, quit guidance...')
+            return False
+        if self.me.aboveHeight(self.safetyMaxHeight):
+            print('Safety module: too high, quit guidance...')
+            return False
+        if self.me.underHeight(self.safetyMinDescendHeight) and self.me.meVelocityENU[2] < -self.safetyMaxDescendVelocity:
+            print('Safety module: too quick desending, quit guidance...')
+            return False
+        return True
 
     def run(self):
         while self.state != State.END and not rospy.is_shutdown():
