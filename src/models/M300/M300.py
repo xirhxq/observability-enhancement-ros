@@ -52,7 +52,9 @@ class M300:
         self.meRPYNED = np.zeros(3)
         self.meRPYENU = np.zeros(3)
 
-        self.hoverThrottle = 31.5
+        self.hoverThrottle = rospy.get_param('hoverThrottle')
+        self.rollSaturationRad = np.deg2rad(rospy.get_param('rollSaturationDeg'))
+        self.pitchSaturationRad = np.deg2rad(rospy.get_param('pitchSaturationDeg'))
 
     def printMe(self):
         print('-' * 10 + 'Me' + '-' * 10)
@@ -324,9 +326,15 @@ class M300:
 
     def acc2attENUControl(self, thrust, rpyRadENU):
         control_cmd = Joy()
+        rpyRadENU = self.saturateRPYRad(rpyRadENU)
         control_cmd.axes = [rpyRadENU[0], rpyRadENU[1], thrust, rpyRadENU[2], DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_THRUST | DJISDK.Control.HORIZONTAL_ANGLE | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_BODY]
         self.ctrl_cmd_pub.publish(control_cmd)
     
+    def saturateRPYRad(self, rpyRadENU):
+        rpyRadENU[0] = max(-self.rollSaturationRad, min(self.rollSaturationRad, rpyRadENU[0]))
+        rpyRadENU[1] = max(-self.pitchSaturationRad, min(self.pitchSaturationRad, rpyRadENU[1]))
+        return rpyRadENU
+
     def sendHeartbeat(self):
         pass
 

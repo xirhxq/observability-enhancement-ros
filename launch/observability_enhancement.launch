@@ -8,6 +8,11 @@
     <arg name="yawDegNED" default="0.0"/>
     <arg name="guidanceLength" default="20.0"/>
 
+    <!-- UAV arguments -->
+    <arg name="hoverThrottle" default="31.5"/>
+    <arg name="rollSaturationDeg" default="10"/>
+    <arg name="pitchSaturationDeg" default="10"/>
+
     <!-- TAKEOFF OR NOT -->
     <arg name="takeoff" default="false"/>
 
@@ -22,6 +27,9 @@
     <param name="takeoffHeight" value="$(arg takeoffHeight)"/>
     <param name="yawDegNED" value="$(arg yawDegNED)"/>
     <param name="guidanceLength" value="$(arg guidanceLength)"/>
+    <param name="hoverThrottle" value="$(arg hoverThrottle)"/>
+    <param name="rollSaturationDeg" value="$(arg rollSaturationDeg)"/>
+    <param name="pitchSaturationDeg" value="$(arg pitchSaturationDeg)"/>
     <param name="takeoff" value="$(arg takeoff)"/>
     <param name="tStep" value="$(arg tStep)"/>
     <param name="tUpperLimit" value="$(arg tUpperLimit)"/>
