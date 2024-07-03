@@ -61,7 +61,6 @@ class SingleRun:
         self.algorithmName = 'observability_enhancement'
 
         self.guidanceLawName = rospy.get_param('GL', 'PN')
-        self.model = rospy.get_param('model', 'useFixedWingModel')
         self.expectedSpeed = rospy.get_param('expectedSpeed')
         self.takeoffHeight = rospy.get_param('takeoffHeight')
         self.yawDegNED = rospy.get_param('yawDegNED')
@@ -156,7 +155,6 @@ class SingleRun:
         # Save parameters to file
         params = {
             'GL': self.guidanceLawName,
-            'model': self.model,
             'expectedSpeed': self.expectedSpeed,
             'takeoffHeight': self.takeoffHeight,
             'yawDegNED': self.yawDegNED,
@@ -341,37 +339,17 @@ class SingleRun:
         self.me.printMe()
 
     def run(self):
-        if self.model == 'useGroundTruth':
-            while self.state != State.END and not rospy.is_shutdown():
-                self.taskTime = time.time() - self.taskStartTime
-                self.stateTime = time.time() - self.stateStartTime
+        while self.state != State.END and not rospy.is_shutdown():
+            self.taskTime = time.time() - self.taskStartTime
+            self.stateTime = time.time() - self.stateStartTime
 
-                self.print()
+            self.print()
 
-                self.me.sendHeartbeat()
-                self.controlStateMachine()
+            self.me.sendHeartbeat()
+            self.controlStateMachine()
 
-                time.sleep(self.tStep)
-                self.t += self.tStep
-        else:
-            for t in np.arange(0, self.tUpperLimit + self.tStep, self.tStep):
-                self.getMeasurement()
-                if self.loopNum > np.floor(self.timeDelay / self.tStep):
-                    if (not len(self.data) == 0) and (not len(self.data[-1]['measurementUse']) == 0):
-                        self.MeasurementFiltering()
-                    if np.linalg.norm(self.getRelativePosition()) > 10 and self.endControlFlag == 0:
-                        self.ekf.newFrame(self.tStep, self.uTarget, self.zUse)
-                if np.linalg.norm(self.getRelativePosition()) > 10 and self.endControlFlag == 0:
-                    self.u = self.guidanceLaw.getU(self.getRelativePosition(), self.getRelativeVelocity(),
-                                                   self.me.getVelocityENU())
-                else:
-                    self.u = np.array([[0], [0], [0]])
-                    self.endControlFlag = 1
-                assert np.all(np.isfinite(self.u)), "u is not finite"
-                self.log()
-                self.update(self.u)
-                if self.getCloseVelocity() < 0:
-                    break
+            time.sleep(self.tStep)
+            self.t += self.tStep
 
     def saveLog(self):
         self.fileName = os.path.join(self.folderName, 'data.pkl')
@@ -469,16 +447,12 @@ class SingleRun:
         currentData['meVelocity'] = copy.copy(enu2ned(self.me.getVelocityENU()))
         currentData['meVelocityNorm'] = copy.copy(np.linalg.norm(self.me.getVelocityENU()))
         currentData['lookAngle'] = copy.copy(self.getLookAngle())
-        if self.model == 'useGroundTruth':
-            currentData['meRPYENU'] = copy.copy(self.me.meRPYENU)
-            currentData['meRPYNED'] = copy.copy(self.me.meRPYNED)
-            currentData['cmdRPYENU'] = copy.copy(self.me.controlEulerENU)
-            currentData['cmdRPYNED'] = copy.copy(self.me.controlEulerNED)
-            currentData['meAccelerationNED'] = copy.copy(self.me.getAccelerationNED())
-            currentData['meAcceCommandNED'] = copy.copy(self.me.guidanceCommandNED)
-        else:
-            if self.model == 'useFixWingModel':
-                currentData['rollAngleCommand'] = copy.copy(self.me.rollAngleCommand)
+        currentData['meRPYENU'] = copy.copy(self.me.meRPYENU)
+        currentData['meRPYNED'] = copy.copy(self.me.meRPYNED)
+        currentData['cmdRPYENU'] = copy.copy(self.me.controlEulerENU)
+        currentData['cmdRPYNED'] = copy.copy(self.me.controlEulerNED)
+        currentData['meAccelerationNED'] = copy.copy(self.me.getAccelerationNED())
+        currentData['meAcceCommandNED'] = copy.copy(self.me.guidanceCommandNED)
         currentData['relativePosition'] = copy.copy(self.getRelativePosition())
         currentData['relativeDistance'] = copy.copy(np.linalg.norm(self.getRelativePosition()))
         currentData['relativeVelocity'] = copy.copy(self.getRelativeVelocity())
