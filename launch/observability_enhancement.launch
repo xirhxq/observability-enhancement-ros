@@ -2,6 +2,9 @@
     <!-- Guidance Law Choice -->
     <arg name="GL" default="OEHG_test"/>
 
+    <!-- Use RTK -->
+    <arg name="useRTK" default="true"/>
+
     <!-- Core arguments -->
     <arg name="expectedSpeed" default="1.0"/>
     <arg name="takeoffHeight" default="10.0"/>
@@ -40,6 +43,8 @@
     <arg name="throttleTestMax" default="50.0"/>
 
     <param name="GL" value="$(arg GL)"/>
+
+    <param name="useRTK" value="$(arg useRTK)"/>
 
     <param name="expectedSpeed" value="$(arg expectedSpeed)"/>
     <param name="takeoffHeight" value="$(arg takeoffHeight)"/>

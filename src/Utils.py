@@ -1,5 +1,6 @@
 import math
 import numpy as np
+from sensor_msgs.msg import NavSatFix
 
 RESET = "\033[0m"
 BOLD = "\033[1m"
@@ -12,6 +13,15 @@ CLEAR = "\033[2J"
 
 STD_SHAPE = (3,)
 GRAVITY = 9.81
+
+def localOffsetFromGpsOffset(target: NavSatFix, origin: NavSatFix):
+    deltaLon = target.longitude - origin.longitude
+    deltaLat = target.latitude - origin.latitude
+    C_EARTH = 6378137.0
+    deltaENU = [np.deg2rad(deltaLon) * C_EARTH * np.cos(np.deg2rad(target.latitude)),
+                np.deg2rad(deltaLat) * C_EARTH,
+                target.altitude - origin.altitude]
+    return np.array(deltaENU)
 
 def ned2frdRotationMatrix(rpyRadNED):
     rollAngle = rpyRadNED[0]

@@ -19,6 +19,7 @@ class M300:
         self.set_local_pos_reference = rospy.ServiceProxy(uav_name + "/dji_osdk_ros/set_local_pos_ref", SetLocalPosRef)
 
         # Subscribers
+        rospy.Subscriber(uav_name + "/dji_osdk_ros/rtk_position", NavSatFix, self.rtk2localPosition_callback)
         rospy.Subscriber(uav_name + "/dji_osdk_ros/attitude", QuaternionStamped, self.attitude_callback)
         rospy.Subscriber(uav_name + "/dji_osdk_ros/gimbal_angle", Vector3Stamped, self.gimbal_callback)
         rospy.Subscriber(uav_name + "/dji_osdk_ros/height_above_takeoff", Float32, self.height_callback)
@@ -38,10 +39,13 @@ class M300:
         self.current_height = Float32()
         self.current_vo_pos = VOPosition()
         self.current_local_pos = Point()
+        self.current_rtk_pos = NavSatFix()
 
         self.flight_status = 255
         self.display_mode = 255
 
+        self.meRTKOrigin = None
+        self.meRTKLla = None
         self.mePositionENU = np.zeros(3)
         self.mePositionNED = np.zeros(3)
         self.meVelocityENU = np.zeros(3)
@@ -60,6 +64,7 @@ class M300:
         self.hoverThrottle = rospy.get_param('hoverThrottle')
         self.rollSaturationRad = np.deg2rad(rospy.get_param('rollSaturationDeg'))
         self.pitchSaturationRad = np.deg2rad(rospy.get_param('pitchSaturationDeg'))
+        self.useRTK = rospy.get_param('useRTK') == True
         
         # Buffer
         self.qBuffer = QuaternionBuffer()
@@ -73,6 +78,14 @@ class M300:
         print('Acceleration NED: ' + pointString(self.meAccelerationNED))
         print('Euler ENU: ' + rpyString(self.meRPYRadENU))
         print('Euler NED: ' + rpyString(self.meRPYRadNED))
+        print('')
+
+    def rtk2localPosition_callback(self, msg):
+        self.current_rtk_pos = msg
+        self.meRtkLla = [msg.latitude, msg.longitude, msg.altitude]
+        if self.meRTKOrigin is not None and self.useRTK:
+            self.mePositionENU = localOffsetFromGpsOffset(msg, self.meRTKOrigin)
+            self.mePositionNED = enu2ned(self.mePositionENU)
 
     def attitude_callback(self, msg):
         self.current_atti = msg
@@ -164,6 +177,13 @@ class M300:
             return False
 
     def set_local_position(self):
+        if self.useRTK:
+            if self.meRtkLla is not None:
+                self.meRTKOrigin = self.current_rtk_pos
+                rospy.loginfo("set rtk origin successful!")
+            else:
+                rospy.logerr("set rtk origin failed!")
+                return False
         # rospy.wait_for_service(self.set_local_pos_reference.resolved_name)
         try:
             response = self.set_local_pos_reference()
