@@ -99,7 +99,7 @@ class SingleRun:
         self.yawRadNED = np.deg2rad(self.yawDegNED)
         self.yawRadENU = yawRadNED2ENU(self.yawRadNED)
         self.unitVector = np.array([math.sin(self.yawRadNED), math.cos(self.yawRadNED)])
-        self.targetState = np.concatenate([self.guidanceLength * self.unitVector, np.zeros(4)])
+        self.targetState = np.concatenate([self.guidanceLength * self.unitVector, [5.0], np.zeros(3)])
         self.uTarget = np.array([0, 0, 0])
 
         self.u = None
