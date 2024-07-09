@@ -124,8 +124,9 @@ class M300:
 
     def local_position_callback(self, msg: PointStamped):
         self.current_local_pos = msg.point
-        self.mePositionENU = np.array([msg.point.x, msg.point.y, msg.point.z])
-        self.mePositionNED = enu2ned(self.mePositionENU)
+        if not self.useRTK:
+            self.mePositionENU = np.array([msg.point.x, msg.point.y, msg.point.z])
+            self.mePositionNED = enu2ned(self.mePositionENU)
 
     def velocity_callback(self, msg: Vector3Stamped):
         self.meVelocityENU = np.array([msg.vector.x, msg.vector.y, msg.vector.z])
