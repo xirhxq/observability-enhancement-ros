@@ -40,9 +40,17 @@ class EKF:
         self.P = (np.eye(K.shape[0]) - K @ H) @ self.P
         assert self.P.shape == (6, 6), f'{self.P.shape = }, should be (6, 6)'
         dZ = z - self.h(self.x[:3] - self.meState)
+        dZ[0] = self.rad_round(dZ[0])
+        dZ[1] = self.rad_round(dZ[1])
         assert dZ.shape == (2, ), f'{dZ.shape = }, should be (2, )'
         self.x += (K @ dZ).reshape(6)
-       
+    
+    def rad_round(self, rad):
+        if rad < -np.pi:
+            return rad + 2 * np.pi
+        if rad > np.pi:
+            return rad - 2 * np.pi
+        return rad
 
     def setFGQ(self, dt):
         self.F = np.block([[np.eye(3), dt * np.eye(3)], [np.zeros((3, 3)), np.eye(3)]])
