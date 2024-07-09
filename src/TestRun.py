@@ -156,8 +156,14 @@ class SingleRun:
 
         builtins.print = custom_print
 
+        print(f"Simulation Condition: takeoffHeight = {self.takeoffHeight}, expectedSpeed = {self.expectedSpeed}, targetState = {self.targetState}")
+        print(f"GL: {self.guidanceLawName}")
+        print(f'{self.me.useRTK = }')
+
         if self.reallyTakeoff:
-            input('Really going to takeoff, input anything to confirm...')
+            input('Really going to takeoff!!! Input anything to confirm...')
+        else:
+            input('No takeoff, input anything to confirm...')
 
         if self.guidanceLawName == 'PN':
             self.guidanceLaw = PN()
@@ -174,6 +180,9 @@ class SingleRun:
         else:
             raise ValueError("Invalid guidance law name")
         
+        print(f"Simulation Condition: takeoffHeight = {self.takeoffHeight}, expectedSpeed = {self.expectedSpeed}, targetState = {self.targetState}")
+        print(f"GL: {self.guidanceLawName}")
+
         print(f"Simulation Condition: takeoffHeight = {self.takeoffHeight}, expectedSpeed = {self.expectedSpeed}, targetState = {self.targetState}")
         print(f"GL: {self.guidanceLawName}")
 
@@ -466,6 +475,7 @@ class SingleRun:
             relPos = self.getRelativePosition(True)
             self.z = np.array([np.arctan2(relPos[2], np.sqrt(relPos[0] ** 2 + relPos[1] ** 2)),
                             np.arctan2(relPos[1], relPos[0])]) + np.random.randn() * self.measurementNoise
+            print(f"measurementsDeg = {np.rad2deg(self.z)}")
             if self.outliers:
                 self.addOutliers()
 
