@@ -253,10 +253,13 @@ class SingleRun:
         self.state = State.BOOST
 
     def stepInit(self):
+        if not self.me.set_local_position():
+            self.toStepLand()
+            return
         if not self.reallyTakeoff:
             self.toStepTakeoff()
             return
-        if not self.me.set_local_position() or not self.me.obtain_control() or not self.me.monitored_takeoff():
+        if not self.me.obtain_control() or not self.me.monitored_takeoff():
             self.toStepLand()
             return
         print('Initialization completed')
