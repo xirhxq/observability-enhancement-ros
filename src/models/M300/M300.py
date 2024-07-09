@@ -72,7 +72,7 @@ class M300:
 
     def printMe(self):
         print('-' * 10 + 'Me' + '-' * 10)
-        print('Position NED: ' + pointString(self.mePositionNED))
+        print('Position ENU: ' + pointString(self.mePositionENU))
         print('Velocity NED: ' + pointString(self.meVelocityNED) + f' speed: {self.meSpeed:.2f}')
         print('Acceleration imuFRD: ' + pointString(self.meAccelerationImuFRD))
         print('Acceleration FRD: ' + pointString(self.meAccelerationFRD))
