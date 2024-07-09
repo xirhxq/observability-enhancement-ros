@@ -3,6 +3,7 @@
 from models.M300.libFlightControl import *
 from Utils import *
 from QuaternionBuffer import QuaternionBuffer
+from sensor_msgs.msg import NavSatFix
 
 class M300:
     def __init__(self, uav_name):
