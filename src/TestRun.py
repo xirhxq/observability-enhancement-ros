@@ -266,7 +266,8 @@ class SingleRun:
         self.toStepTakeoff()
 
     def stepTakeoff(self):
-        self.me.positionENUControl(self.takeoffPointENU, self.yawRadENU)
+        if self.reallyTakeoff:
+            self.me.positionENUControl(self.takeoffPointENU, self.yawRadENU)
         print(f'{self.me.mePositionENU = }')
         print(f'{self.takeoffPointENU = }')
         print(f'{self.me.distanceToPointENU(self.takeoffPointENU) = }')
@@ -277,7 +278,8 @@ class SingleRun:
                 self.toStepPrepare()
 
     def stepPrepare(self):
-        self.me.positionENUControl(self.preparePointENU, self.yawRadENU)
+        if self.reallyTakeoff:
+            self.me.positionENUControl(self.preparePointENU, self.yawRadENU)
         print(f'{self.me.mePositionENU = }')
         print(f'{self.preparePointENU = }')
         print(f'{self.me.distanceToPointENU(self.preparePointENU) = }')
@@ -322,13 +324,16 @@ class SingleRun:
             hoverThrottle=self.me.hoverThrottle
         )
         self.cmdRPYRadNED = rpyENU2NED(self.cmdRPYRadENU)
-        self.me.acc2attENUControl(thrust, self.cmdRPYRadENU)
+        
+        if self.reallyTakeoff:
+            self.me.acc2attENUControl(thrust, self.cmdRPYRadENU)
 
         self.loopNum += 1
         self.log()
 
     def stepBack(self):
-        self.me.positionENUControl(self.takeoffPointENU, self.yawRadENU)
+        if self.reallyTakeoff:
+            self.me.positionENUControl(self.takeoffPointENU, self.yawRadENU)
         if self.me.nearPositionENU(self.takeoffPointENU):
             self.toStepLand()
 
@@ -354,7 +359,8 @@ class SingleRun:
         
         if self.throttleTestAdjustPosition:
             print('ADJUSTING POSITION!!!')
-            self.me.positionENUControl(self.takeoffPointENU, self.yawRadENU)
+            if self.reallyTakeoff:
+                self.me.positionENUControl(self.takeoffPointENU, self.yawRadENU)
             print(f'{self.me.mePositionENU = }')
             print(f'{self.takeoffPointENU = }')
             print(f'{self.me.distanceToPointENU(self.takeoffPointENU) = }')
@@ -392,7 +398,8 @@ class SingleRun:
             self.toStepBack()
 
     def stepBoost(self):
-        self.me.velocityENUControl(self.initialVelocityENU, self.yawRadENU)
+        if self.reallyTakeoff:
+            self.me.velocityENUControl(self.initialVelocityENU, self.yawRadENU)
         if np.dot(self.me.mePositionENU[:2], self.unitVector) > 0:
             print(f"stepGuidanceInitialMePositionNED = {self.me.mePositionNED}")
             print(f"stepGuidanceInitialMeVelocityNED = {self.me.meVelocityNED}")
