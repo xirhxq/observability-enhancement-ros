@@ -7,19 +7,20 @@
 
     <!-- Core arguments -->
     <arg name="expectedSpeed" default="1.0"/>
-    <arg name="takeoffHeight" default="10.0"/>
-    <arg name="yawDegNED" default="0.0"/>
+    <arg name="takeoffHeight" default="20.0"/>
+    <arg name="yawDegNED" default="270.0"/>
     <arg name="guidanceLength" default="20.0"/>
 
     <!-- UAV arguments -->
-    <arg name="hoverThrottle" default="31.5"/>
+    <!-- <arg name="hoverThrottle" default="33.77"/> -->
+    <arg name="hoverThrottle" default="31.4"/>
     <arg name="rollSaturationDeg" default="10"/>
     <arg name="pitchSaturationDeg" default="10"/>
 
     <!-- Safety Module arguments -->
-    <arg name="safetyMinHeight" default="3"/>
+    <arg name="safetyMinHeight" default="0.5"/>
     <arg name="safetyMaxHeight" default="40"/>
-    <arg name="safetyMinDescendHeight" default="5"/>
+    <arg name="safetyMinDescendHeight" default="20"/>
     <arg name="safetyMaxDescendVelocity" default="2"/>
 
     <!-- TAKEOFF OR NOT -->
@@ -39,7 +40,7 @@
     <arg name="throttleTestOn" default="false"/>
     <arg name="throttleTestHeight" default="20"/>
     <arg name="throttleTestChangeTime" default="0.5"/>
-    <arg name="throttleTestMin" default="20.0"/>
+    <arg name="throttleTestMin" default="30.0"/>
     <arg name="throttleTestMax" default="50.0"/>
 
     <param name="GL" value="$(arg GL)"/>
