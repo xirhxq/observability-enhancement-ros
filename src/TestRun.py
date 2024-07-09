@@ -295,7 +295,11 @@ class SingleRun:
             self.toStepHover()
             return
         
-        if self.me.underHeight(0.1):
+        if self.me.mePositionENU[2] <= self.targetState[2]:
+            self.toStepHover()
+            return
+        
+        if self.me.underHeight(0.5):
             self.toStepLand() 
             return
 
