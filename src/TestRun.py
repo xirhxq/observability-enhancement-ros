@@ -100,8 +100,8 @@ class SingleRun:
 
         self.yawRadNED = np.deg2rad(self.yawDegNED)
         self.yawRadENU = yawRadNED2ENU(self.yawRadNED)
-        self.unitVector = np.array([math.sin(self.yawRadNED), math.cos(self.yawRadNED)])
-        self.targetState = np.concatenate([self.guidanceLength * self.unitVector, [20.0], np.zeros(3)])
+        self.unitVectorEN = np.array([math.sin(self.yawRadNED), math.cos(self.yawRadNED)])
+        self.targetState = np.concatenate([self.guidanceLength * self.unitVectorEN, [20.0], np.zeros(3)])
         self.uTarget = np.array([0, 0, 0])
 
         self.u = None
@@ -120,7 +120,7 @@ class SingleRun:
         self.stateTime = 0
 
         self.takeoffPointENU = np.array([0, 0, self.takeoffHeight])
-        self.preparePointENU = np.concatenate([-self.unitVector * self.guidanceLength, np.array([self.takeoffHeight])])
+        self.preparePointENU = np.concatenate([-self.unitVectorEN * self.guidanceLength, np.array([self.takeoffHeight])])
         self.initialVelocityENU = np.array([
             self.expectedSpeed * np.sin(self.yawRadNED), 
             self.expectedSpeed * np.cos(self.yawRadNED), 
@@ -264,9 +264,8 @@ class SingleRun:
     def stepTakeoff(self):
         if self.reallyTakeoff:
             self.me.positionENUControl(self.takeoffPointENU, self.yawRadENU)
-        print(f'{self.me.mePositionENU = }')
-        print(f'{self.takeoffPointENU = }')
-        print(f'{self.me.distanceToPointENU(self.takeoffPointENU) = }')
+        print(f'Takeoff point: {pointString(self.takeoffPointENU)}')
+        print(f'Distance to point: {self.me.distanceToPointENU(self.takeoffPointENU):.2f}')
         if self.me.nearPositionENU(self.takeoffPointENU) and self.me.nearSpeed(0):
             if self.throttleTestOn:
                 self.toStepThrottleTest()
@@ -278,9 +277,8 @@ class SingleRun:
     def stepPrepare(self):
         if self.reallyTakeoff:
             self.me.positionENUControl(self.preparePointENU, self.yawRadENU)
-        print(f'{self.me.mePositionENU = }')
-        print(f'{self.preparePointENU = }')
-        print(f'{self.me.distanceToPointENU(self.preparePointENU) = }')
+        print(f'Prepare point: {pointString(self.preparePointENU)}')
+        print(f'Distance to point: {self.me.distanceToPointENU(self.preparePointENU):.2f}')
         if self.me.nearPositionENU(self.preparePointENU) and self.me.nearSpeed(0):
             self.toStepBoost()
 
@@ -406,7 +404,7 @@ class SingleRun:
     def stepBoost(self):
         if self.reallyTakeoff:
             self.me.velocityENUControl(self.initialVelocityENU, self.yawRadENU)
-        if np.dot(self.me.mePositionENU[:2], self.unitVector) > 0:
+        if np.dot(self.me.mePositionENU[:2], self.unitVectorEN) > 0:
             print(f"stepGuidanceInitialMePositionNED = {self.me.mePositionNED}")
             print(f"stepGuidanceInitialMeVelocityNED = {self.me.meVelocityNED}")
             self.toStepGuidance()

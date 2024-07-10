@@ -80,7 +80,6 @@ class M300:
         print('Euler ENU: ' + rpyString(self.meRPYRadENU))
         print('Euler NED: ' + rpyString(self.meRPYRadNED))
         print(f'Hoverthrottle: {self.hoverThrottle:.2f}')
-        print('')
 
     def rtk2localPosition_callback(self, msg):
         self.current_rtk_pos = msg
