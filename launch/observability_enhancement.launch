@@ -8,7 +8,7 @@
 
     <!-- Core arguments -->
     <arg name="expectedSpeed" default="1.0"/>
-    <arg name="takeoffHeight" default="20.0"/>
+    <arg name="takeoffHeight" default="35.0"/>
     <arg name="yawDegNED" default="270.0"/>
     <arg name="guidanceLength" default="20.0"/>
 
