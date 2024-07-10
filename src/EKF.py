@@ -42,6 +42,9 @@ class EKF:
         dZ = z - self.h(self.x[:3] - self.meState)
         dZ[0] = self.rad_round(dZ[0])
         dZ[1] = self.rad_round(dZ[1])
+        print(f"dZ = {np.rad2deg(dZ)}")
+        print(f"z = {np.rad2deg(z)}")
+        print(f"hx = {np.rad2deg(self.h(self.x[:3] - self.meState))}")
         assert dZ.shape == (2, ), f'{dZ.shape = }, should be (2, )'
         self.x += (K @ dZ).reshape(6)
     

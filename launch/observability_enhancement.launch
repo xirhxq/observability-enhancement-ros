@@ -13,7 +13,6 @@
     <arg name="guidanceLength" default="20.0"/>
 
     <!-- UAV arguments -->
-    <!-- <arg name="hoverThrottle" default="33.77"/> -->
     <arg name="hoverThrottle" default="31.4"/>
     <arg name="rollSaturationDeg" default="10"/>
     <arg name="pitchSaturationDeg" default="10"/>
