@@ -19,10 +19,11 @@
     <arg name="pitchSaturationDeg" default="10"/>
 
     <!-- Safety Module arguments -->
-    <arg name="safetyMinHeight" default="0.5"/>
-    <arg name="safetyMaxHeight" default="40"/>
-    <arg name="safetyMinDescendHeight" default="20"/>
-    <arg name="safetyMaxDescendVelocity" default="2"/>
+    <arg name="safetyMinHeight" default="5.0"/>
+    <arg name="safetyMaxHeight" default="45.0"/>
+    <arg name="safetyMinDescendHeight" default="20.0"/>
+    <arg name="safetyMaxDescendVelocity" default="5.0"/>
+    <arg name="safetyMaxAscendVelocity" default="3.0"/>
 
     <!-- TAKEOFF OR NOT -->
     <arg name="takeoff" default="false"/>
@@ -42,7 +43,7 @@
     <arg name="throttleTestHeight" default="35.0"/>
     <arg name="throttleTestChangeTime" default="0.5"/>
     <arg name="throttleTestMin" default="30.0"/>
-    <arg name="throttleTestMax" default="50.0"/>
+    <arg name="throttleTestMax" default="40.0"/>
 
     <param name="guidanceOn" value="$(arg guidanceOn)"/>
     <param name="GL" value="$(arg GL)"/>
@@ -62,6 +63,7 @@
     <param name="safetyMaxHeight" value="$(arg safetyMaxHeight)"/>
     <param name="safetyMinDescendHeight" value="$(arg safetyMinDescendHeight)"/>
     <param name="safetyMaxDescendVelocity" value="$(arg safetyMaxDescendVelocity)"/>
+    <param name="safetyMaxAscendVelocity" value="$(arg safetyMaxAscendVelocity)"/>
 
     <param name="takeoff" value="$(arg takeoff)"/>
 

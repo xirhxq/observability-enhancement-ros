@@ -72,6 +72,7 @@ class SingleRun:
         self.safetyMaxHeight = rospy.get_param('safetyMaxHeight')
         self.safetyMinDescendHeight = rospy.get_param('safetyMinDescendHeight')
         self.safetyMaxDescendVelocity = rospy.get_param('safetyMaxDescendVelocity')
+        self.safetyMaxAscendVelocity = rospy.get_param('safetyMaxAscendVelocity')
 
         self.reallyTakeoff = rospy.get_param('takeoff', False) == True
 
@@ -455,6 +456,9 @@ class SingleRun:
             return False
         if self.me.underHeight(self.safetyMinDescendHeight) and self.me.meVelocityENU[2] < -self.safetyMaxDescendVelocity:
             print('Safety module: too quick desending, quit guidance...')
+            return False
+        if self.me.meVelocityENU[2] > self.safetyMaxAscendVelocity:
+            print('Safety module: too quick asending, quit guidance...')
             return False
         return True
 
