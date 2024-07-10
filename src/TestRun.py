@@ -495,6 +495,9 @@ class SingleRun:
             self.z = np.array([np.arctan2(relPos[2], np.sqrt(relPos[0] ** 2 + relPos[1] ** 2)),
                             np.arctan2(relPos[1], relPos[0])]) + np.random.randn() * self.measurementNoise
             print(f"measurementsDeg = {np.rad2deg(self.z)}")
+            self.z[0] = rad_round(self.z[0])
+            self.z[1] = rad_round(self.z[1])
+            print(f"measurementsDegLimit = {np.rad2deg(self.z)}")
             if self.outliers:
                 self.addOutliers()
 
@@ -508,8 +511,8 @@ class SingleRun:
                 self.zUse = self.z
 
     def MeasurementFiltering(self):
-        if np.abs(self.zUse[0] - self.data[-1]['measurementUse'][0]) > np.deg2rad(8) or \
-                np.abs(self.zUse[1] - self.data[-1]['measurementUse'][1]) > np.deg2rad(8):
+        if rad_round(np.abs(self.zUse[0] - self.data[-1]['measurementUse'][0])) > np.deg2rad(8) or \
+                rad_round(np.abs(self.zUse[1] - self.data[-1]['measurementUse'][1])) > np.deg2rad(8):
             self.zUse = self.data[-2]['measurementUse']
 
     def getRelativePosition(self, real = False):

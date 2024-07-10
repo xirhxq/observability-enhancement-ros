@@ -178,3 +178,10 @@ def accENUYawENU2EulerENUThrust(accENU, yawRadENU, hoverThrottle):
     eulerRadENU = rpyNED2ENU(controlEulerNED)
     thrust = hoverThrottle * abs(liftAcc[2] / math.cos(rollRad) / math.cos(pitchRad) / GRAVITY)
     return thrust, eulerRadENU
+
+def rad_round(rad):
+    if rad < -np.pi:
+        return rad + 2 * np.pi
+    if rad > np.pi:
+        return rad - 2 * np.pi
+    return rad
