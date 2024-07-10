@@ -23,14 +23,14 @@ def los2enuRotationMatrix(yAxisRotationAngle, zAxisRotationAngle):
     return np.linalg.inv(enu2losRotationMatrix(yAxisRotationAngle, zAxisRotationAngle))
 
 class PN_test:
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.nn = 3
         self.glc = None
         self.intVcError = 0.0
         self.tStep = 0.02
-        self.expectedVc = 5.0
-        self.kp = 4.0
-        self.ki = 8.0
+        self.expectedVc = kwargs.get('expectedVc')
+        self.kp = 2.0
+        self.ki = 2.0
         self.uLos = np.zeros(3)
 
     def getU(self, relativePosition, relativeVelocity, velMe):

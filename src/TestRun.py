@@ -170,7 +170,7 @@ class SingleRun:
         if self.guidanceLawName == 'PN':
             self.guidanceLaw = PN()
         elif self.guidanceLawName == 'PN_test':
-            self.guidanceLaw = PN_test()
+            self.guidanceLaw = PN_test(expectedVc=self.expectedSpeed)
         elif self.guidanceLawName == 'OEG':
             self.guidanceLaw = OEG()
         elif self.guidanceLawName == 'RAIM':
