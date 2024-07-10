@@ -60,6 +60,7 @@ class SingleRun:
         rospy.init_node('observability_enhancement', anonymous=True)
         self.algorithmName = 'observability_enhancement'
 
+        self.guidanceOn = rospy.get_param('guidanceOn') == True
         self.guidanceLawName = rospy.get_param('GL', 'PN')
 
         self.expectedSpeed = rospy.get_param('expectedSpeed')
@@ -274,8 +275,10 @@ class SingleRun:
         if self.me.nearPositionENU(self.takeoffPointENU) and self.me.nearSpeed(0):
             if self.throttleTestOn:
                 self.toStepThrottleTest()
-            else:
+            elif self.guidanceOn:
                 self.toStepPrepare()
+            else:
+                self.toStepLand()
 
     def stepPrepare(self):
         if self.reallyTakeoff:
@@ -381,7 +384,11 @@ class SingleRun:
                 
         if self.throttleMax - self.throttleMin < 0.01:
             print(f'Throttle test result: between {self.throttleMin} and {self.throttleMax}')
-            self.toStepLand()
+            self.me.hoverThrottle = self.throttleMax
+            if self.guidanceOn:
+                self.toStepPrepare()
+            else:
+                self.toStepLand()
             return
 
         if self.throttleMax - self.throttleTestMin < 0.5:

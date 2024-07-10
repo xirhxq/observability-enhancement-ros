@@ -1,5 +1,6 @@
 <launch>
     <!-- Guidance Law Choice -->
+    <arg name="guidanceOn" default="true"/>
     <arg name="GL" default="OEHG_test"/>
 
     <!-- Use RTK -->
@@ -37,12 +38,13 @@
     <arg name="cameraPitch" default="0.0"/>
 
     <!-- Throttle Test arguments -->
-    <arg name="throttleTestOn" default="false"/>
-    <arg name="throttleTestHeight" default="20"/>
+    <arg name="throttleTestOn" default="true"/>
+    <arg name="throttleTestHeight" default="35.0"/>
     <arg name="throttleTestChangeTime" default="0.5"/>
     <arg name="throttleTestMin" default="30.0"/>
     <arg name="throttleTestMax" default="50.0"/>
 
+    <param name="guidanceOn" value="$(arg guidanceOn)"/>
     <param name="GL" value="$(arg GL)"/>
 
     <param name="useRTK" value="$(arg useRTK)"/>
