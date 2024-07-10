@@ -572,7 +572,7 @@ class SingleRun:
 
     def log(self):
         currentData = {}
-        currentData['t'] = copy.copy(self.t)
+        currentData['t'] = copy.copy(self.stateTime)
         currentData['u'] = copy.copy(self.u)
         currentData['tStep'] = copy.copy(self.tStep)
         currentData['timeDelay'] = copy.copy(self.timeDelay)
