@@ -157,9 +157,9 @@ class SingleRun:
 
         builtins.print = custom_print
 
-        print(f"Simulation Condition: takeoffHeight = {self.takeoffHeight}, expectedSpeed = {self.expectedSpeed}, targetState = {self.targetState}")
-        print(f"GL: {self.guidanceLawName}")
-        print(f'{self.me.useRTK = }')
+        print(f"Simulation Condition: {self.takeoffHeight = }, {self.expectedSpeed = }, {self.targetState = }")
+        print(f'{self.guidanceOn = }, {self.throttleTestOn = }')
+        print(f'{self.guidanceLawName = }, {self.me.useRTK = }')
 
         if self.reallyTakeoff:
             input('Really going to takeoff!!! Input anything to confirm...')
