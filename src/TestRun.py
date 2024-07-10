@@ -181,12 +181,6 @@ class SingleRun:
             self.guidanceLaw = OEHG_test(expectedVc=self.expectedSpeed)
         else:
             raise ValueError("Invalid guidance law name")
-        
-        print(f"Simulation Condition: takeoffHeight = {self.takeoffHeight}, expectedSpeed = {self.expectedSpeed}, targetState = {self.targetState}")
-        print(f"GL: {self.guidanceLawName}")
-
-        print(f"Simulation Condition: takeoffHeight = {self.takeoffHeight}, expectedSpeed = {self.expectedSpeed}, targetState = {self.targetState}")
-        print(f"GL: {self.guidanceLawName}")
 
         # Save parameters to file
         params = {
