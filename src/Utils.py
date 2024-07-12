@@ -155,6 +155,8 @@ def pointString(point):
     assert len(point) == 3, f'Length of point should be 3, but get {len(point)}'
     return f"({point[0]:.2f}, {point[1]:.2f}, {point[2]:.2f})"
 
+def vector3String(point):
+    return f"({point.x:.2f}, {point.y:.2f}, {point.z:.2f})"
 
 def rpyString(rpyRad):
     assert len(rpyRad) == 3, f'Length of rpy should be 3, but get {len(rpyRad)}'
@@ -167,7 +169,7 @@ def accENUYawENU2EulerENUThrust(accENU, yawRadENU, hoverThrottle):
     accNED = enu2ned(accENU)
 
     liftAcc = -(accNED - np.array([0, 0, GRAVITY]))
-    
+    print(f"liftAcc = {liftAcc}")
     r1 = math.cos(yawRadNED) * liftAcc[0] + math.sin(yawRadNED) * liftAcc[1]
     r2 = math.sin(yawRadNED) * liftAcc[0] - math.cos(yawRadNED) * liftAcc[1]
     pitchRad = math.atan2(r1, liftAcc[2])
@@ -176,6 +178,7 @@ def accENUYawENU2EulerENUThrust(accENU, yawRadENU, hoverThrottle):
     controlEulerNED = np.array([rollRad, pitchRad, yawRadNED])
     
     eulerRadENU = rpyNED2ENU(controlEulerNED)
+    print(f"ControlEulerENU = {rpyString(eulerRadENU)}")
     thrust = hoverThrottle * abs(liftAcc[2] / math.cos(rollRad) / math.cos(pitchRad) / GRAVITY)
     return thrust, eulerRadENU
 
