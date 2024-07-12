@@ -19,28 +19,17 @@ class M300:
         self.drone_task_service = rospy.ServiceProxy(uav_name + "/dji_osdk_ros/drone_task_control", DroneTaskControl)
         self.set_local_pos_reference = rospy.ServiceProxy(uav_name + "/dji_osdk_ros/set_local_pos_ref", SetLocalPosRef)
 
-        # Subscribers
-        rospy.Subscriber(uav_name + "/dji_osdk_ros/rtk_position", NavSatFix, self.rtk2localPosition_callback)
-        rospy.Subscriber(uav_name + "/dji_osdk_ros/attitude", QuaternionStamped, self.attitude_callback)
-        rospy.Subscriber(uav_name + "/dji_osdk_ros/gimbal_angle", Vector3Stamped, self.gimbal_callback)
-        rospy.Subscriber(uav_name + "/dji_osdk_ros/height_above_takeoff", Float32, self.height_callback)
-        rospy.Subscriber(uav_name + "/dji_osdk_ros/vo_position", VOPosition, self.vo_pos_callback)
-        rospy.Subscriber(uav_name + "/dji_osdk_ros/flight_status", UInt8, self.flight_status_callback)
-        rospy.Subscriber(uav_name + "/dji_osdk_ros/display_mode", UInt8, self.display_mode_callback)
-        rospy.Subscriber(uav_name + "/dji_osdk_ros/local_position", PointStamped, self.local_position_callback)
-        rospy.Subscriber(uav_name + "/dji_osdk_ros/velocity", Vector3Stamped, self.velocity_callback)
-        rospy.Subscriber(uav_name + "/dji_osdk_ros/imu", Imu, self.imu_callback)
-        rospy.Subscriber(uav_name + "/dji_osdk_ros/acceleration_ground_fused", Vector3Stamped, self.accelerationENU_callback)
-        rospy.Subscriber(uav_name + "/spirecv/aruco_detection", TargetsInFrame, self.lookAngle_callback)
-
         # State variables
         self.current_atti = QuaternionStamped()
-        self.current_gimbal_angle = Point()
+        self.current_gimbal_rpy_deg = Point()
         self.current_pos_raw = Point()
         self.current_height = Float32()
         self.current_vo_pos = VOPosition()
         self.current_local_pos = Point()
         self.current_rtk_pos = NavSatFix()
+        
+        # Buffer
+        self.qBuffer = QuaternionBuffer()
 
         self.flight_status = 255
         self.display_mode = 255
@@ -66,9 +55,23 @@ class M300:
         self.rollSaturationRad = np.deg2rad(rospy.get_param('rollSaturationDeg'))
         self.pitchSaturationRad = np.deg2rad(rospy.get_param('pitchSaturationDeg'))
         self.useRTK = rospy.get_param('useRTK') == True
+
+        self.elevationAngle = 0.0
+        self.azimuthAngle = 0.0
         
-        # Buffer
-        self.qBuffer = QuaternionBuffer()
+        # Subscribers
+        rospy.Subscriber(uav_name + "/dji_osdk_ros/rtk_position", NavSatFix, self.rtk2localPosition_callback)
+        rospy.Subscriber(uav_name + "/dji_osdk_ros/attitude", QuaternionStamped, self.attitude_callback)
+        rospy.Subscriber(uav_name + "/dji_osdk_ros/gimbal_angle", Vector3Stamped, self.gimbal_callback)
+        rospy.Subscriber(uav_name + "/dji_osdk_ros/height_above_takeoff", Float32, self.height_callback)
+        rospy.Subscriber(uav_name + "/dji_osdk_ros/vo_position", VOPosition, self.vo_pos_callback)
+        rospy.Subscriber(uav_name + "/dji_osdk_ros/flight_status", UInt8, self.flight_status_callback)
+        rospy.Subscriber(uav_name + "/dji_osdk_ros/display_mode", UInt8, self.display_mode_callback)
+        rospy.Subscriber(uav_name + "/dji_osdk_ros/local_position", PointStamped, self.local_position_callback)
+        rospy.Subscriber(uav_name + "/dji_osdk_ros/velocity", Vector3Stamped, self.velocity_callback)
+        rospy.Subscriber(uav_name + "/dji_osdk_ros/imu", Imu, self.imu_callback)
+        rospy.Subscriber(uav_name + "/dji_osdk_ros/acceleration_ground_fused", Vector3Stamped, self.accelerationENU_callback)
+        rospy.Subscriber("/spirecv/aruco_detection", TargetsInFrame, self.lookAngle_callback)
 
     def printMe(self):
         print('-' * 10 + 'Me' + '-' * 10)
@@ -80,10 +83,11 @@ class M300:
         print('Euler ENU: ' + rpyString(self.meRPYRadENU))
         print('Euler NED: ' + rpyString(self.meRPYRadNED))
         print(f'Hoverthrottle: {self.hoverThrottle:.2f}')
+        print(f'gimbalAngleRPYdeg = {vector3String(self.current_gimbal_rpy_deg)}')
 
     def rtk2localPosition_callback(self, msg):
         self.current_rtk_pos = msg
-        self.meRtkLla = [msg.latitude, msg.longitude, msg.altitude]
+        self.meRTKLla = [msg.latitude, msg.longitude, msg.altitude]
         if self.meRTKOrigin is not None and self.useRTK:
             self.mePositionENU = localOffsetFromGpsOffset(msg, self.meRTKOrigin)
             self.mePositionNED = enu2ned(self.mePositionENU)
@@ -101,9 +105,9 @@ class M300:
                 self.meRPYRadNEDDelay = rpyENU2NED(self.meRPYRadENUDelay)
 
     def gimbal_callback(self, msg):
-        self.current_gimbal_angle.x = msg.vector.y
-        self.current_gimbal_angle.y = msg.vector.x
-        self.current_gimbal_angle.z = msg.vector.z
+        self.current_gimbal_rpy_deg.x = msg.vector.y
+        self.current_gimbal_rpy_deg.y = msg.vector.x
+        self.current_gimbal_rpy_deg.z = msg.vector.z
 
     def lookAngle_callback(self, msg: TargetsInFrame):
         if len(msg.targets) > 0:
@@ -180,7 +184,7 @@ class M300:
 
     def set_local_position(self):
         if self.useRTK:
-            if self.meRtkLla is not None:
+            if self.meRTKLla is not None:
                 self.meRTKOrigin = self.current_rtk_pos
                 rospy.loginfo("set rtk origin successful!")
             else:
@@ -370,6 +374,7 @@ class M300:
     def acc2attENUControl(self, thrust, rpyRadENU):
         control_cmd = Joy()
         rpyRadENU = self.saturateRPYRad(rpyRadENU)
+        print(f"rpySaturateDeg = {np.rad2deg(rpyRadENU)}")
         control_cmd.axes = [rpyRadENU[0], rpyRadENU[1], thrust, rpyRadENU[2], DJISDK.Control.STABLE_ENABLE | DJISDK.Control.VERTICAL_THRUST | DJISDK.Control.HORIZONTAL_ANGLE | DJISDK.Control.YAW_ANGLE | DJISDK.Control.HORIZONTAL_BODY]
         self.ctrl_cmd_pub.publish(control_cmd)
     
