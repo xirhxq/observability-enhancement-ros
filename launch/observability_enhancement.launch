@@ -88,6 +88,6 @@
 
     <param name="mode" value="$(arg mode)"/>
 
-    <node name="dji_gimbal_control" pkg="observability_enhancement" type="GimbalControl.py" output="screen"/>
+    <node name="dji_gimbal_control" pkg="observability_enhancement" type="GimbalControl.py" output="log"/>
 
 </launch>
