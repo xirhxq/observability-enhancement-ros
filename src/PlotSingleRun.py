@@ -75,6 +75,9 @@ class PlotSingleRun:
         ax.set_ylabel('$Y$ (m)')
         ax.set_zlabel('$Z$ (m)')
 
+        ax.set_box_aspect([1,1,1])
+        ax.view_init(elev=30, azim=180)
+
         plt.title('ENU Position', fontsize=10)
         plt.savefig(self.folderPath + '/Trajectory.png')
         plt.close()
@@ -367,17 +370,17 @@ class PlotSingleRun:
         RT_error = np.abs(ekfState[:3, :] - targetPosition)
 
         plt.subplot(3, 1, 1)
-        plt.plot(time[:-35], RT_error[0, :-35], 'r', linewidth=2.5)
+        plt.plot(time, RT_error[0, :], 'r', linewidth=2.5)
         plt.xlabel('Time (s)', fontsize=12)
         plt.ylabel('Error of RTx (m)', fontsize=10)
 
         plt.subplot(3, 1, 2)
-        plt.plot(time[:-35], RT_error[1, :-35], 'g', linewidth=2.5)
+        plt.plot(time, RT_error[1, :], 'g', linewidth=2.5)
         plt.xlabel('Time (s)', fontsize=12)
         plt.ylabel('Error of RTy (m)', fontsize=10)
 
         plt.subplot(3, 1, 3)
-        plt.plot(time[:-35], RT_error[2, :-35], 'b', linewidth=2.5)
+        plt.plot(time, RT_error[2, :], 'b', linewidth=2.5)
         plt.xlabel('Time (s)', fontsize=12)
         plt.ylabel('Error of RTz (m)', fontsize=10)
 
@@ -398,17 +401,17 @@ class PlotSingleRun:
         VT_error = np.abs(ekfState[3:, :] - targetVelocity)
 
         plt.subplot(3, 1, 1)
-        plt.plot(time[:-35], VT_error[0, :-35], 'r', linewidth=2.5)
+        plt.plot(time, VT_error[0, :], 'r', linewidth=2.5)
         plt.xlabel('Time (s)', fontsize=12)
         plt.ylabel('Error of VTx (m/s)', fontsize=10)
 
         plt.subplot(3, 1, 2)
-        plt.plot(time[:-35], VT_error[1, :-35], 'g', linewidth=2.5)
+        plt.plot(time, VT_error[1, :], 'g', linewidth=2.5)
         plt.xlabel('Time (s)', fontsize=12)
         plt.ylabel('Error of VTy (m/s)', fontsize=10)
 
         plt.subplot(3, 1, 3)
-        plt.plot(time[:-35], VT_error[2, :-35], 'b', linewidth=2.5)
+        plt.plot(time, VT_error[2, :], 'b', linewidth=2.5)
         plt.xlabel('Time (s)', fontsize=12)
         plt.ylabel('Error of VTz (m/s)', fontsize=10)
 
@@ -617,7 +620,7 @@ class PlotSingleRun:
             alpha=0.5
         )  
         
-        meOEHG, = ax.plot([], [], [], 'b', linewidth=2, label='OEHG')
+        meGL, = ax.plot([], [], [], 'b', linewidth=2, label=self.guidanceLawName)
         target, = ax.plot([], [], [], 'ro', markersize=8, label='Target')
         estimateTarget, = ax.plot([], [], [], 'k*', markersize=10, label='Estimate Target')
 
@@ -630,13 +633,13 @@ class PlotSingleRun:
         
         def update(frame):
             tq.update(1)
-            meOEHG.set_data(mePosition[0, :frame], mePosition[1, :frame])
-            meOEHG.set_3d_properties(mePosition[2, :frame])
+            meGL.set_data(mePosition[0, :frame], mePosition[1, :frame])
+            meGL.set_3d_properties(mePosition[2, :frame])
             target.set_data([targetPosition[0, frame]], [targetPosition[1, frame]])
             target.set_3d_properties([targetPosition[2, frame]])
             estimateTarget.set_data([ekfState[0, frame]], [ekfState[1, frame]])
             estimateTarget.set_3d_properties([ekfState[2, frame]])
-            return meOEHG, target, estimateTarget
+            return meGL, target, estimateTarget
 
         anim = FuncAnimation(fig, update, frames, interval=50)
         fileName = 'Estimating.gif'
