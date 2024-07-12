@@ -28,7 +28,7 @@ class GuidanceLawCommon:
 
         self.normalisedRelativeVelocity = relativeVelocity / self.relativeSpeed
         self.normalisedVelMe = velMe / self.velMeScalar
-
+        self.normalisedLos = self.relativePosition/ self.relativeDistance
         self.missDistance = abs(self.relativeDistance**2 * np.linalg.norm(self.losRate) / np.sqrt(self.closeVelocity**2 + self.relativeDistance**2 + np.linalg.norm(self.losRate)**2))
 
     @property
