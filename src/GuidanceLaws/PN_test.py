@@ -29,8 +29,8 @@ class PN_test:
         self.intVcError = 0.0
         self.tStep = 0.02
         self.expectedVc = kwargs.get('expectedVc')
-        self.kp = 2.0
-        self.ki = 2.0
+        self.kp = 1.0
+        self.ki = 0.5
         self.uLos = np.zeros(3)
 
     def getU(self, relativePosition, relativeVelocity, velMe):
