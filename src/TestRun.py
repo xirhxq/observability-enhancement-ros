@@ -65,6 +65,7 @@ class SingleRun:
 
         self.expectedSpeed = rospy.get_param('expectedSpeed')
         self.takeoffHeight = rospy.get_param('takeoffHeight')
+        self.targetHeight = rospy.get_param('targetHeight')
         self.yawDegNED = rospy.get_param('yawDegNED')
         self.guidanceLength = rospy.get_param('guidanceLength')
 
@@ -73,6 +74,7 @@ class SingleRun:
         self.safetyMinDescendHeight = rospy.get_param('safetyMinDescendHeight')
         self.safetyMaxDescendVelocity = rospy.get_param('safetyMaxDescendVelocity')
         self.safetyMaxAscendVelocity = rospy.get_param('safetyMaxAscendVelocity')
+        self.safetyDistance = rospy.get_param('safetyDistance')
 
         self.reallyTakeoff = rospy.get_param('takeoff', False) == True
 
@@ -89,7 +91,9 @@ class SingleRun:
         self.throttleTestMax = rospy.get_param('throttleTestMax')
 
         self.useCamera = rospy.get_param('useCamera', False)
-        self.cameraPitch = rospy.get_param('cameraPitch', 0.0)
+        self.cameraPitch = np.degrees(np.arctan((self.takeoffHeight - self.targetHeight) / self.guidanceLength))
+
+        self.targetNOffset = 34
 
         if self.throttleTestOn:
             self.takeoffHeight = self.throttleTestHeight
@@ -101,7 +105,9 @@ class SingleRun:
         self.yawRadNED = np.deg2rad(self.yawDegNED)
         self.yawRadENU = yawRadNED2ENU(self.yawRadNED)
         self.unitVectorEN = np.array([math.sin(self.yawRadNED), math.cos(self.yawRadNED)])
-        self.targetState = np.concatenate([self.guidanceLength * self.unitVectorEN, [20.0], np.zeros(3)])
+        self.targetState = np.concatenate([self.guidanceLength * self.unitVectorEN, [self.targetHeight], np.zeros(3)])
+        self.targetState[1] += self.targetNOffset
+        self.realTargetENU = self.targetState[:3]
         self.uTarget = np.array([0, 0, 0])
 
         self.u = None
@@ -121,6 +127,7 @@ class SingleRun:
 
         self.takeoffPointENU = np.array([0, 0, self.takeoffHeight])
         self.preparePointENU = np.concatenate([-self.unitVectorEN * self.guidanceLength, np.array([self.takeoffHeight])])
+        self.preparePointENU[1] += self.targetNOffset
         self.initialVelocityENU = np.array([
             self.expectedSpeed * np.sin(self.yawRadNED), 
             self.expectedSpeed * np.cos(self.yawRadNED), 
@@ -183,18 +190,7 @@ class SingleRun:
             raise ValueError("Invalid guidance law name")
 
         # Save parameters to file
-        params = {
-            'GL': self.guidanceLawName,
-            'expectedSpeed': self.expectedSpeed,
-            'takeoffHeight': self.takeoffHeight,
-            'yawDegNED': self.yawDegNED,
-            'guidanceLength': self.guidanceLength,
-            'takeoff': self.reallyTakeoff,
-            'tStep': self.tStep,
-            'tUpperLimit': self.tUpperLimit,
-            'outliers': self.outliers,
-            'timeDelay': self.timeDelay
-        }
+        params = rospy.get_param('/')
 
         with open(os.path.join(self.folderName, 'params.json'), 'w') as f:
             json.dump(params, f, indent=4)
@@ -287,20 +283,16 @@ class SingleRun:
             self.toStepLand()
             return
         
-        if np.linalg.norm(self.getRelativePosition()) <= 0.1:
+        if np.linalg.norm(self.getRelativePosition()) <= self.safetyDistance:
             self.toStepHover()
             return
         
         if self.me.mePositionENU[2] <= self.targetState[2]:
             self.toStepHover()
             return
-        
-        if self.me.underHeight(0.5):
-            self.toStepLand() 
-            return
 
         if not self.safetyModule():
-            self.toStepLand()
+            self.toStepHover()
             return
             
         self.getMeasurement()
@@ -348,7 +340,7 @@ class SingleRun:
             return
         
         if not self.safetyModule():
-            self.toStepLand()
+            self.toStepHover()
             return
         
         if not self.me.nearPositionENU(self.takeoffPointENU, tol=10):
@@ -452,6 +444,9 @@ class SingleRun:
         if self.me.meVelocityENU[2] > self.safetyMaxAscendVelocity:
             print('Safety module: too quick asending, quit guidance...')
             return False
+        if self.me.nearPositionENU(self.realTargetENU, tol=self.safetyDistance):
+            print('Safety module: too close to real target, quit guidance...')
+            return False
         return True
 
     def run(self):
@@ -488,6 +483,7 @@ class SingleRun:
             LOSdirectionENU = ned2enu(LOSdirectionNED)
             self.z = np.array([np.arctan2(LOSdirectionENU[2], np.sqrt(LOSdirectionENU[0] ** 2 + LOSdirectionENU[1] ** 2)),
                             np.arctan2(LOSdirectionENU[1], LOSdirectionENU[0])])
+            print(f"measurementTrue = {np.rad2deg(self.z)}")
         else:
             relPos = self.getRelativePosition(True)
             self.z = np.array([np.arctan2(relPos[2], np.sqrt(relPos[0] ** 2 + relPos[1] ** 2)),
@@ -554,6 +550,8 @@ class SingleRun:
         if self.useCamera:
             elevationAngle = self.me.elevationAngle
             azimuthAngle = self.me.azimuthAngle
+            print(f"elevationAngleFromCameraDeg = {np.rad2deg(elevationAngle)}")
+            print(f"azimuthAngleFromCameraDeg = {np.rad2deg(azimuthAngle)}")
         else:
             losDirectionNED = enu2ned(self.getRelativePosition(True).flatten()/np.linalg.norm(self.getRelativePosition(True)))
             print(f"losDirectionNED = {losDirectionNED}")
