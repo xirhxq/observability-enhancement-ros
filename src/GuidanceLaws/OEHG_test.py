@@ -11,7 +11,7 @@ class OEHG_test:
         self.intVcError = 0.0
         self.tStep = 0.02
         self.expectedVc = kwargs.get('expectedVc')
-        self.kp = 2.0
+        self.kp = 1.5
         self.ki = 2.0
         self.uOEGLos = np.zeros(3)
 
@@ -30,10 +30,12 @@ class OEHG_test:
         losRateLOS = np.dot(enu2los, self.glc.losRate)
         vcError = self.expectedVc - self.glc.closeVelocity
         self.intVcError = (vcError) * self.tStep + self.intVcError
-
+        print(f"deltaCloseV = {vcError}")
+        print(f"intDeltaCloseV = {self.intVcError}")
         self.uOEGLos[0] = self.kp * vcError + self.ki * self.intVcError
         self.uOEGLos[1] = xNP * self.glc.closeVelocity * losRateLOS[2]
         self.uOEGLos[2] = -xNP * self.glc.closeVelocity * losRateLOS[1]
+        print(f"closedAcc = {self.uOEGLos[0]}")
         print(f"omega = {self.omega}")
         print(f"close velocity ={self.glc.closeVelocity}" )
         print(f"kp = {self.kp}, ki = {self.ki}")
@@ -44,7 +46,7 @@ class OEHG_test:
         uOEGDirection = np.dot(los2enu, np.array([0, self.uOEGLos[1],self.uOEGLos[2]]))
         print(f"uOEG = {uOEGDirection}")
         uOEGVelocity = np.dot(los2enu, np.array([self.uOEGLos[0], 0, 0]))
-        uDirection = np.cos(thetaRotation) * uOEGDirection + (1 - np.cos(thetaRotation)) * (np.outer(self.glc.normalisedVelMe, self.glc.normalisedVelMe)) @ uOEGDirection + np.sin(thetaRotation) * np.cross(self.glc.normalisedVelMe.flatten(), uOEGDirection.flatten()).reshape(3,)
+        uDirection = np.cos(thetaRotation) * uOEGDirection + (1 - np.cos(thetaRotation)) * (np.outer(self.glc.normalisedLos, self.glc.normalisedLos)) @ uOEGDirection + np.sin(thetaRotation) * np.cross(self.glc.normalisedLos.flatten(), uOEGDirection.flatten()).reshape(3,)
         print(f"uDirection = {uDirection}")
         print(f"uOEGVelocity = {uOEGVelocity}")
         uV = uOEGVelocity
