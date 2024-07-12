@@ -165,7 +165,7 @@ class GimbalControlNode:
         if self.meRPYRadNED is None or self.initYawNEDDeg is None:
             return
         
-        expectedRPYRadNED = self.meRPYRadNED - np.radians(self.gimbalTargetRPYNEDDeg)
+        expectedRPYRadNED = self.meRPYRadNED + np.radians(self.gimbalTargetRPYNEDDeg)
         nowRPYRadNED = self.meGimbalRPYNEDRad
 
         speed = normalizeRad(expectedRPYRadNED - nowRPYRadNED)
