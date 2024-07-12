@@ -14,6 +14,7 @@ import numpy as np
 import rospy
 import rospkg
 
+from PID import PID
 from EKF import EKF
 from GuidanceLaws.OEHG import OEHG
 from GuidanceLaws.OEHG_test import OEHG_test
@@ -62,7 +63,7 @@ class SingleRun:
 
         self.guidanceOn = rospy.get_param('guidanceOn') == True
         self.guidanceLawName = rospy.get_param('GL', 'PN')
-
+        
         self.expectedSpeed = rospy.get_param('expectedSpeed')
         self.takeoffHeight = rospy.get_param('takeoffHeight')
         self.targetHeight = rospy.get_param('targetHeight')
@@ -75,12 +76,13 @@ class SingleRun:
         self.safetyMaxDescendVelocity = rospy.get_param('safetyMaxDescendVelocity')
         self.safetyMaxAscendVelocity = rospy.get_param('safetyMaxAscendVelocity')
         self.safetyDistance = rospy.get_param('safetyDistance')
+        self.safetyMaxSpeed = rospy.get_param('safetyMaxSpeed')
 
         self.reallyTakeoff = rospy.get_param('takeoff', False) == True
 
         self.tStep = rospy.get_param('tStep', 0.02)
         self.tUpperLimit = rospy.get_param('tUpperLimit', 100)
-
+        
         self.outliers = rospy.get_param('outliers', False) == True
         self.timeDelay = rospy.get_param('timeDelay', 0.0)
 
@@ -92,7 +94,7 @@ class SingleRun:
 
         self.useCamera = rospy.get_param('useCamera', False)
         self.cameraPitch = np.degrees(np.arctan((self.takeoffHeight - self.targetHeight) / self.guidanceLength))
-
+        
         self.targetNOffset = 34
 
         if self.throttleTestOn:
@@ -243,6 +245,7 @@ class SingleRun:
     @stepEntrance
     def toStepBoost(self):
         self.state = State.BOOST
+        self.boostPID = [PID(kp=1.5, ki=0.1, kd=0.0), PID(kp=1.5, ki=0.1, kd=0.0), PID(kp=1.5, ki=0.5, kd=0.0)]
 
     def stepInit(self):
         if not self.me.set_local_position():
@@ -280,14 +283,17 @@ class SingleRun:
 
     def stepGuidance(self):
         if self.stateTime >= 100.0:
+            print('Time limit exceeded, guidance end!')
             self.toStepLand()
             return
         
-        if np.linalg.norm(self.getRelativePosition()) <= self.safetyDistance:
+        if np.linalg.norm(self.getRelativePosition()) <= 0.1:
+            print('Less than safety distance to estimated target, guidance end!')
             self.toStepHover()
             return
         
         if self.me.mePositionENU[2] <= self.targetState[2]:
+            print('Lower than estimated target, guidance end!')
             self.toStepHover()
             return
 
@@ -389,13 +395,23 @@ class SingleRun:
         self.me.acc2attENUControl(self.throttle, np.array([0.0, 0.0, self.yawRadENU]))
 
     def stepHover(self):
+        # self.getMeasurement()
         self.me.hoverWithYaw(self.yawRadENU)
         if self.stateTime >= 5.0:
             self.toStepBack()
 
     def stepBoost(self):
         if self.reallyTakeoff:
-            self.me.velocityENUControl(self.initialVelocityENU, self.yawRadENU)
+            # self.me.velocityENUControl(self.initialVelocityENU, self.yawRadENU)
+            vErrorENU = self.initialVelocityENU - self.me.meVelocityENU
+            amccCd = np.array([self.boostPID[i].compute(vErrorENU[i]) for i in range(3)])
+            print(f"velocityCtrlCommand = {pointString(amccCd)}")
+            thrust, self.cmdRPYRadENU = accENUYawENU2EulerENUThrust(
+                accENU= amccCd, 
+                yawRadENU=self.yawRadENU, 
+                hoverThrottle=self.me.hoverThrottle
+            )
+            self.me.acc2attENUControl(thrust, self.cmdRPYRadENU)
         if np.dot(self.me.mePositionENU[:2], self.unitVectorEN) > 0:
             print(f"stepGuidanceInitialMePositionNED = {self.me.mePositionNED}")
             print(f"stepGuidanceInitialMeVelocityNED = {self.me.meVelocityNED}")
@@ -447,6 +463,8 @@ class SingleRun:
         if self.me.nearPositionENU(self.realTargetENU, tol=self.safetyDistance):
             print('Safety module: too close to real target, quit guidance...')
             return False
+        if self.me.meSpeed > self.safetyMaxSpeed:
+            print('Safety module: too quick, quit guidance...')
         return True
 
     def run(self):
@@ -484,6 +502,9 @@ class SingleRun:
             self.z = np.array([np.arctan2(LOSdirectionENU[2], np.sqrt(LOSdirectionENU[0] ** 2 + LOSdirectionENU[1] ** 2)),
                             np.arctan2(LOSdirectionENU[1], LOSdirectionENU[0])])
             print(f"measurementTrue = {np.rad2deg(self.z)}")
+            self.z[0] = rad_round(self.z[0])
+            self.z[1] = rad_round(self.z[1])
+            print(f"measurementsDegLimit = {np.rad2deg(self.z)}")
         else:
             relPos = self.getRelativePosition(True)
             self.z = np.array([np.arctan2(relPos[2], np.sqrt(relPos[0] ** 2 + relPos[1] ** 2)),
