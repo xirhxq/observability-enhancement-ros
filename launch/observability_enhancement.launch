@@ -8,7 +8,8 @@
 
     <!-- Core arguments -->
     <arg name="expectedSpeed" default="1.0"/>
-    <arg name="takeoffHeight" default="35.0"/>
+    <arg name="takeoffHeight" default="18.0"/>
+    <arg name="targetHeight" default="3.0"/>
     <arg name="yawDegNED" default="270.0"/>
     <arg name="guidanceLength" default="20.0"/>
 
@@ -18,11 +19,12 @@
     <arg name="pitchSaturationDeg" default="10"/>
 
     <!-- Safety Module arguments -->
-    <arg name="safetyMinHeight" default="5.0"/>
+    <arg name="safetyMinHeight" default="3.0"/>
     <arg name="safetyMaxHeight" default="45.0"/>
     <arg name="safetyMinDescendHeight" default="20.0"/>
-    <arg name="safetyMaxDescendVelocity" default="5.0"/>
-    <arg name="safetyMaxAscendVelocity" default="3.0"/>
+    <arg name="safetyMaxDescendVelocity" default="6.0"/>
+    <arg name="safetyMaxAscendVelocity" default="5.0"/>
+    <arg name="safetyDistance" default="10.0"/>
 
     <!-- TAKEOFF OR NOT -->
     <arg name="takeoff" default="false"/>
@@ -34,15 +36,14 @@
     <!-- Measurement arguments -->
     <arg name="outliers" default="false"/>
     <arg name="timeDelay" default="0.0"/>
-    <arg name="useCamera" default="false"/>
-    <arg name="cameraPitch" default="0.0"/>
+    <arg name="useCamera" default="true"/>
 
     <!-- Throttle Test arguments -->
     <arg name="throttleTestOn" default="true"/>
-    <arg name="throttleTestHeight" default="35.0"/>
+    <arg name="throttleTestHeight" default="18.0"/>
     <arg name="throttleTestChangeTime" default="0.5"/>
-    <arg name="throttleTestMin" default="30.0"/>
-    <arg name="throttleTestMax" default="40.0"/>
+    <arg name="throttleTestMin" default="25.0"/>
+    <arg name="throttleTestMax" default="45.0"/>
 
     <param name="guidanceOn" value="$(arg guidanceOn)"/>
     <param name="GL" value="$(arg GL)"/>
@@ -51,6 +52,7 @@
 
     <param name="expectedSpeed" value="$(arg expectedSpeed)"/>
     <param name="takeoffHeight" value="$(arg takeoffHeight)"/>
+    <param name="targetHeight" value="$(arg targetHeight)"/>
     <param name="yawDegNED" value="$(arg yawDegNED)"/>
     <param name="guidanceLength" value="$(arg guidanceLength)"/>
 
@@ -63,6 +65,7 @@
     <param name="safetyMinDescendHeight" value="$(arg safetyMinDescendHeight)"/>
     <param name="safetyMaxDescendVelocity" value="$(arg safetyMaxDescendVelocity)"/>
     <param name="safetyMaxAscendVelocity" value="$(arg safetyMaxAscendVelocity)"/>
+    <param name="safetyDistance" value="$(arg safetyDistance)"/>
 
     <param name="takeoff" value="$(arg takeoff)"/>
 
@@ -72,7 +75,6 @@
     <param name="outliers" value="$(arg outliers)"/>
     <param name="timeDelay" value="$(arg timeDelay)"/>
     <param name="useCamera" value="$(arg useCamera)"/>
-    <param name="cameraPitch" value="$(arg cameraPitch)"/>
 
     <param name="throttleTestOn" value="$(arg throttleTestOn)"/>
     <param name="throttleTestHeight" value="$(arg throttleTestHeight)"/>
@@ -81,4 +83,11 @@
     <param name="throttleTestMax" value="$(arg throttleTestMax)"/>
 
     <node name="observability_enhancement" pkg="observability_enhancement" type="TestRun.py" output="screen"/>
+
+    <arg name="mode" default="stabilize"/>
+
+    <param name="mode" value="$(arg mode)"/>
+
+    <node name="dji_gimbal_control" pkg="dji_gimbal_control" type="dji_gimbal_control.py" output="log"/>
+
 </launch>
