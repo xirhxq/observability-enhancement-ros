@@ -81,7 +81,7 @@ class GimbalControlNode:
         targetHeight = rospy.get_param("targetHeight")
 
         self.cameraPitchENUDeg = np.degrees(np.arctan((takeoffHeight - targetHeight) / guidanceLength))
-        self.gimbalTargetRPYNEDDeg = np.array([0.0, -self.cameraPitchENUDeg, 0.0])
+        self.gimbalTargetRPYNEDDeg = np.array([0.0, -self.cameraPitchENUDeg, 25.0])
 
         self.uav_name = uav_name
 
@@ -97,9 +97,9 @@ class GimbalControlNode:
         self.elapsed_time = 0
 
         self.rpySpeedPID = [
-            PID(kp=1, ki=0, kd=0.0, intMax=np.pi, intMin=-np.pi),
-            PID(kp=1, ki=0, kd=0.0, intMax=np.pi, intMin=-np.pi),
-            PID(kp=1, ki=0, kd=0.0, intMax=np.pi, intMin=-np.pi),
+            PID(kp=0.4, ki=0, kd=0.0, intMax=np.pi, intMin=-np.pi),
+            PID(kp=0.4, ki=0, kd=0.0, intMax=np.pi, intMin=-np.pi),
+            PID(kp=0.4, ki=0, kd=0.0, intMax=np.pi, intMin=-np.pi),
         ]
 
         print(f"Initializing GimbalControlNode for UAV: {uav_name} in {self.mode} mode")
