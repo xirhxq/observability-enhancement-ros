@@ -36,6 +36,7 @@ class M300:
 
         self.meRTKOrigin = None
         self.meRTKLla = None
+        self.meGPSLla = None
         self.mePositionENU = np.zeros(3)
         self.mePositionNED = np.zeros(3)
         self.meVelocityENU = np.zeros(3)
@@ -55,12 +56,14 @@ class M300:
         self.rollSaturationRad = np.deg2rad(rospy.get_param('rollSaturationDeg'))
         self.pitchSaturationRad = np.deg2rad(rospy.get_param('pitchSaturationDeg'))
         self.useRTK = rospy.get_param('useRTK') == True
+        self.meGimbalRPYNEDRad = np.zeros(3)
 
         self.elevationAngle = 0.0
         self.azimuthAngle = 0.0
         
         # Subscribers
         rospy.Subscriber(uav_name + "/dji_osdk_ros/rtk_position", NavSatFix, self.rtk2localPosition_callback)
+        rospy.Subscriber(uav_name + "/dji_osdk_ros/gps_position", NavSatFix, self.gpsPosition_callback)
         rospy.Subscriber(uav_name + "/dji_osdk_ros/attitude", QuaternionStamped, self.attitude_callback)
         rospy.Subscriber(uav_name + "/dji_osdk_ros/gimbal_angle", Vector3Stamped, self.gimbal_callback)
         rospy.Subscriber(uav_name + "/dji_osdk_ros/height_above_takeoff", Float32, self.height_callback)
@@ -87,10 +90,14 @@ class M300:
 
     def rtk2localPosition_callback(self, msg):
         self.current_rtk_pos = msg
-        self.meRTKLla = [msg.latitude, msg.longitude, msg.altitude]
+        self.meRTKLla = [msg.longitude, msg.latitude, msg.altitude]
         if self.meRTKOrigin is not None and self.useRTK:
             self.mePositionENU = localOffsetFromGpsOffset(msg, self.meRTKOrigin)
             self.mePositionNED = enu2ned(self.mePositionENU)
+
+    def gpsPosition_callback(self, msg):
+        self.current_gps_pos = msg
+        self.meGPSLla = [msg.longitude, msg.latitude, msg.altitude]
 
     def attitude_callback(self, msg):
         self.current_atti = msg
@@ -108,6 +115,8 @@ class M300:
         self.current_gimbal_rpy_deg.x = msg.vector.y
         self.current_gimbal_rpy_deg.y = msg.vector.x
         self.current_gimbal_rpy_deg.z = msg.vector.z
+        self.meGimbalRPYNEDRad = np.radians(np.array([self.current_gimbal_rpy_deg.x, self.current_gimbal_rpy_deg.y, self.current_gimbal_rpy_deg.z]))
+        self.meGimbalRPYENURad = rpyNED2ENU(self.meGimbalRPYNEDRad)
 
     def lookAngle_callback(self, msg: TargetsInFrame):
         if len(msg.targets) > 0:

@@ -593,7 +593,7 @@ class SingleRun:
         currentData['u'] = copy.copy(self.u)
         currentData['tStep'] = copy.copy(self.tStep)
         currentData['timeDelay'] = copy.copy(self.timeDelay)
-        currentData['targetPosition'] = copy.copy(self.targetState[:3])
+        currentData['targetPosition'] = copy.copy(self.targetENU)
         currentData['targetVelocity'] = copy.copy(self.targetState[3:])
         currentData['mePositionENU'] = copy.copy(self.me.getPositionENU())
         currentData['mePositionNED'] = copy.copy(enu2ned(self.me.getPositionENU()))
@@ -621,6 +621,9 @@ class SingleRun:
             self.ekf.x - np.concatenate([self.me.getPositionENU(), self.me.getVelocityENU()]))
         currentData['measurement'] = copy.copy(self.z)
         currentData['measurementUse'] = copy.copy(self.zUse)
+        currentData['meGimbalRPYENURad'] = copy.copy(self.me.meGimbalRPYENURad)
+        currentData['meGPSLla'] = copy.copy(self.me.meGPSLla)
+        currentData['meRTKLla'] = copy.copy(self.me.meRTKLla)
         
         self.data.append(currentData)
 
