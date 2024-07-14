@@ -338,8 +338,8 @@ class PlotSingleRun:
         measurementUseMatrix = np.zeros((2, len(measurementUse)))
 
         for i in range(len(measurementUse)):
-            measurementUseMatrix[0, i] = measurementUse[i][0, 0]
-            measurementUseMatrix[1, i] = measurementUse[i][1, 0]
+            measurementUseMatrix[0, i] = measurementUse[i][0]
+            measurementUseMatrix[1, i] = measurementUse[i][1]
             
         plt.subplot(2, 1, 1)
         plt.plot(time[int(self.data[0]['timeDelay'] / self.data[0]['tStep']) + 1:], np.rad2deg(measurementUseMatrix[0][1:]), 'r', linewidth=2.5)
@@ -485,6 +485,40 @@ class PlotSingleRun:
         ax.legend()
 
         plt.savefig(os.path.join(self.folderPath, 'LookAngleWithRelativeDistance.png'))
+        plt.close()
+    
+    def plotGimbalAngleAndAttitudeAngle(self):
+        self.createFigure()
+
+        time = [d['t'] for d in self.data]
+        attitude = np.zeros((3, len(self.data)))
+        gimbal = np.zeros((3, len(self.data)))
+
+        for i in range(len(self.data)):
+            attitude[0:3, i] = np.squeeze(self.data[i]['meRPYENU'])
+            gimbal[0:3, i] = np.squeeze(self.data[i]['meGimbalRPYENURad'])
+
+        plt.subplot(3, 1, 1)
+        plt.plot(time, np.rad2deg(attitude[0, :]), 'r', linewidth=2, label='attitude')
+        plt.plot(time, np.rad2deg(gimbal[0, :]), 'g', linewidth=2, label='gimbal')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Roll angle (deg)')
+        plt.legend()
+
+        plt.subplot(3, 1, 2)
+        plt.plot(time, np.rad2deg(attitude[1, :]), 'r', linewidth=2, label='attitude')
+        plt.plot(time, np.rad2deg(gimbal[1, :]), 'g', linewidth=2, label='gimbal')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Pitch angle (deg)')
+        plt.legend()
+
+        plt.subplot(3, 1, 3)
+        plt.plot(time, np.rad2deg(attitude[2, :]), 'r', linewidth=2, label='attitude')
+        plt.plot(time, np.rad2deg(gimbal[2, :]), 'g', linewidth=2, label='gimbal')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Yaw angle (deg)')
+        plt.legend()
+        plt.savefig(os.path.join(self.folderPath, 'AttitudeAndGimbal.png'))
         plt.close()
 
     def plotAcceResponse(self):
@@ -662,6 +696,7 @@ class PlotSingleRun:
             self.plotLookAngleScatterWithTime()
             self.plotLookAngleWithTime()
             self.plotLookAngleWithRelativeDistance()
+            self.plotMeasurementUse()
             self.plotTrajectory()
             self.plotAcceResponse()
             self.plotVelResponse()
@@ -673,6 +708,7 @@ class PlotSingleRun:
             self.plotTargetPositionError()
             self.plotTargetVelocityError()
             self.plotAttitudeMeENU()
+            self.plotGimbalAngleAndAttitudeAngle()
             self.plotEulerMeAndCommandENU()
             self.createGif()
         else:
