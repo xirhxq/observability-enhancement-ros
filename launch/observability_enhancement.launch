@@ -8,10 +8,10 @@
 
     <!-- Core arguments -->
     <arg name="expectedSpeed" default="1.0"/>
-    <arg name="takeoffHeight" default="18.0"/>
-    <arg name="targetHeight" default="3.0"/>
+    <arg name="takeoffHeight" default="15.0"/>
+    <arg name="targetHeight" default="0.0"/>
     <arg name="yawDegNED" default="270.0"/>
-    <arg name="guidanceLength" default="20.0"/>
+    <arg name="guidanceLength" default="45.0"/>
 
     <!-- UAV arguments -->
     <arg name="hoverThrottle" default="31.4"/>
@@ -22,9 +22,10 @@
     <arg name="safetyMinHeight" default="3.0"/>
     <arg name="safetyMaxHeight" default="45.0"/>
     <arg name="safetyMinDescendHeight" default="20.0"/>
-    <arg name="safetyMaxDescendVelocity" default="6.0"/>
-    <arg name="safetyMaxAscendVelocity" default="5.0"/>
-    <arg name="safetyDistance" default="10.0"/>
+    <arg name="safetyMaxDescendVelocity" default="8.0"/>
+    <arg name="safetyMaxAscendVelocity" default="8.0"/>
+    <arg name="safetyDistance" default="12.0"/>
+    <arg name="safetyMaxSpeed" default="12.0"/>
 
     <!-- TAKEOFF OR NOT -->
     <arg name="takeoff" default="false"/>
@@ -43,7 +44,7 @@
     <arg name="throttleTestHeight" default="18.0"/>
     <arg name="throttleTestChangeTime" default="0.5"/>
     <arg name="throttleTestMin" default="25.0"/>
-    <arg name="throttleTestMax" default="45.0"/>
+    <arg name="throttleTestMax" default="40.0"/>
 
     <param name="guidanceOn" value="$(arg guidanceOn)"/>
     <param name="GL" value="$(arg GL)"/>
@@ -66,6 +67,7 @@
     <param name="safetyMaxDescendVelocity" value="$(arg safetyMaxDescendVelocity)"/>
     <param name="safetyMaxAscendVelocity" value="$(arg safetyMaxAscendVelocity)"/>
     <param name="safetyDistance" value="$(arg safetyDistance)"/>
+    <param name="safetyMaxSpeed" value="$(arg safetyMaxSpeed)"/>
 
     <param name="takeoff" value="$(arg takeoff)"/>
 
@@ -84,7 +86,7 @@
 
     <node name="observability_enhancement" pkg="observability_enhancement" type="TestRun.py" output="screen"/>
 
-    <arg name="mode" default="stabilize"/>
+    <arg name="mode" default="track"/>
 
     <param name="mode" value="$(arg mode)"/>
 
