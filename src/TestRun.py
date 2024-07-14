@@ -9,6 +9,7 @@ import sys
 import time
 import threading
 from enum import Enum
+from Utils import *
 
 import numpy as np
 import rospy
@@ -97,19 +98,32 @@ class SingleRun:
         
         self.targetNOffset = 34
 
-        if self.throttleTestOn:
+        if self.throttleTestOn: 
             self.takeoffHeight = self.throttleTestHeight
         
         self.loopNum = 1
         self.t = 0
         self.nn = 3
 
+        rospy.init_node(self.algorithmName, anonymous=True)
+        self.me = M300('suav')
+        self.spinThread = threading.Thread(target=lambda: rospy.spin())
+        self.spinThread.start()
+
+        print(f'Wait for GPS Origin')
+        while not rospy.is_shutdown() and self.me.meRTKOrigin is None:
+            time.sleep(0.1)
+            self.me.set_local_position()
+        print(f'Get GPS origin!')
+
         self.yawRadNED = np.deg2rad(self.yawDegNED)
         self.yawRadENU = yawRadNED2ENU(self.yawRadNED)
         self.unitVectorEN = np.array([math.sin(self.yawRadNED), math.cos(self.yawRadNED)])
+        self.unitVectorENU = np.concatenate([self.unitVectorEN, np.zeros(1)])
+        self.targetLla = NavSatFix(latitude=34.675701, longitude=109.849817, altitude=334.073267)
+        self.targetENU = localOffsetFromGpsOffset(self.targetLla, self.me.meRTKOrigin)
         self.targetState = np.concatenate([self.guidanceLength * self.unitVectorEN, [self.targetHeight], np.zeros(3)])
         self.targetState[1] += self.targetNOffset
-        self.realTargetENU = self.targetState[:3]
         self.uTarget = np.array([0, 0, 0])
 
         self.u = None
@@ -128,8 +142,11 @@ class SingleRun:
         self.stateTime = 0
 
         self.takeoffPointENU = np.array([0, 0, self.takeoffHeight])
-        self.preparePointENU = np.concatenate([-self.unitVectorEN * self.guidanceLength, np.array([self.takeoffHeight])])
-        self.preparePointENU[1] += self.targetNOffset
+        self.preparePointENU = self.targetENU - self.unitVectorENU * self.guidanceLength * 2
+        self.preparePointENU[2] = self.takeoffHeight - 6.0
+        # self.preparePointENU = np.concatenate([-self.unitVectorEN * self.guidanceLength, np.array([self.takeoffHeight - 3.0])])
+        # self.preparePointENU[1] += self.targetNOffset
+        self.guidanceStartPointENU = self.preparePointENU + self.unitVectorENU * self.guidanceLength
         self.initialVelocityENU = np.array([
             self.expectedSpeed * np.sin(self.yawRadNED), 
             self.expectedSpeed * np.cos(self.yawRadNED), 
@@ -139,11 +156,6 @@ class SingleRun:
         self.cmdAccNED = np.zeros(3)
         self.cmdRPYRadENU = np.zeros(3)
         self.cmdRPYRadNED = np.zeros(3)
-
-        rospy.init_node(self.algorithmName, anonymous=True)
-        self.me = M300('suav')
-        self.spinThread = threading.Thread(target=lambda: rospy.spin())
-        self.spinThread.start()
 
         rospack = rospkg.RosPack()
         self.packagePath = rospack.get_path(self.algorithmName)
@@ -170,6 +182,8 @@ class SingleRun:
         print(f"Simulation Condition: {self.takeoffHeight = }, {self.expectedSpeed = }, {self.targetState = }")
         print(f'{self.guidanceOn = }, {self.throttleTestOn = }')
         print(f'{self.guidanceLawName = }, {self.me.useRTK = }')
+        print(f'Target @ {pointString(self.targetENU)}')
+        print(f'Prepare @ {pointString(self.preparePointENU)}, guidance start @ {pointString(self.guidanceStartPointENU)}')
 
         if self.reallyTakeoff:
             input('Really going to takeoff!!! Input anything to confirm...')
@@ -245,12 +259,9 @@ class SingleRun:
     @stepEntrance
     def toStepBoost(self):
         self.state = State.BOOST
-        self.boostPID = [PID(kp=1.5, ki=0.1, kd=0.0), PID(kp=1.5, ki=0.1, kd=0.0), PID(kp=1.5, ki=0.5, kd=0.0)]
+        self.boostPID = [PID(kp=1.0, ki=0.1, kd=0.0), PID(kp=1.0, ki=0.1, kd=0.0), PID(kp=1.0, ki=0.1, kd=0.0)]
 
     def stepInit(self):
-        if not self.me.set_local_position():
-            self.toStepLand()
-            return
         if not self.reallyTakeoff:
             self.toStepTakeoff()
             return
@@ -412,7 +423,7 @@ class SingleRun:
                 hoverThrottle=self.me.hoverThrottle
             )
             self.me.acc2attENUControl(thrust, self.cmdRPYRadENU)
-        if np.dot(self.me.mePositionENU[:2], self.unitVectorEN) > 0:
+        if np.dot(self.me.mePositionENU - self.guidanceStartPointENU, self.unitVectorENU) > 0:
             print(f"stepGuidanceInitialMePositionNED = {self.me.mePositionNED}")
             print(f"stepGuidanceInitialMeVelocityNED = {self.me.meVelocityNED}")
             self.toStepGuidance()
@@ -460,11 +471,14 @@ class SingleRun:
         if self.me.meVelocityENU[2] > self.safetyMaxAscendVelocity:
             print('Safety module: too quick asending, quit guidance...')
             return False
-        if self.me.nearPositionENU(self.realTargetENU, tol=self.safetyDistance):
+        if self.me.nearPositionENU(self.targetENU, tol=self.safetyDistance):
             print('Safety module: too close to real target, quit guidance...')
             return False
         if self.me.meSpeed > self.safetyMaxSpeed:
             print('Safety module: too quick, quit guidance...')
+        if np.dot(self.me.mePositionENU - self.targetENU, self.unitVectorENU) > 0:
+            print('Safety module: target overtaken, quit guidance...')
+            return False
         return True
 
     def run(self):
