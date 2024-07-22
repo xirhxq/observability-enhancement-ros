@@ -612,6 +612,46 @@ class PlotSingleRun:
         plt.tight_layout()
         plt.savefig(os.path.join(self.folderPath, 'PosGradientAndVelocity.png'))
         plt.close()
+    
+    def plotMeasurementUseAndLosAngle(self):
+        time = [d['t'] for d in self.data]
+        measurementUse = []
+        for data in self.data:
+            if not len(data['measurementUse']) == 0:
+                if data['measurementUse'][1] < 0:
+                    data['measurementUse'][1] += 2 * np.pi
+                measurementUse.append(data['measurementUse'])
+        
+        measurementUse = np.array(measurementUse)
+        
+        num_data_points = len(self.data)
+        targetPosition = np.zeros((3, num_data_points))
+        mePosition = np.zeros((3, num_data_points))
+        relativePosition = np.zeros((3, num_data_points))
+        losAngle = np.zeros((2, num_data_points))
+        
+        for i in range(num_data_points):
+            targetPosition[:, i] = np.squeeze(self.data[i]['targetPosition'])
+            mePosition[:, i] = np.squeeze(self.data[i]['mePositionENU'])
+            relativePosition[:, i] = targetPosition[:, i] - mePosition[:, i]
+            losAngle[:, i] = np.array([
+                np.arctan2(relativePosition[2, i], np.sqrt(relativePosition[0, i] ** 2 + relativePosition[1, i] ** 2)),
+                np.arctan2(relativePosition[1, i], relativePosition[0, i])
+            ])
+        
+        fig, ax = plt.subplots(2, 1, figsize=(8, 10))
+        for num, direction in enumerate(['elevation angle', 'azimuth angle']):
+            ax[num].plot(time[int(self.data[0]['timeDelay'] / self.data[0]['tStep']):], np.rad2deg(measurementUse[:, num]), linewidth=2.0,
+                        label='Measurement of ' + direction)
+            ax[num].plot(time, np.rad2deg(losAngle[num, :]), linewidth=2.0,
+                        label='Real ' + direction)
+            ax[num].set_xlabel('Time (s)')
+            ax[num].set_ylabel('Angle (deg)')
+            ax[num].legend(loc='upper right')
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.folderPath, 'measurementUseAndLosAngle.png'))
+        plt.close()
 
     def createGif(self):
         frames = np.arange(start=0, stop=len(self.data), step=1)
@@ -693,6 +733,7 @@ class PlotSingleRun:
 
     def plotAll(self):
         if self.useGroundTruth:
+            self.plotMeasurementUseAndLosAngle()
             self.plotLookAngleScatterWithTime()
             self.plotLookAngleWithTime()
             self.plotLookAngleWithRelativeDistance()
@@ -708,7 +749,7 @@ class PlotSingleRun:
             self.plotTargetPositionError()
             self.plotTargetVelocityError()
             self.plotAttitudeMeENU()
-            self.plotGimbalAngleAndAttitudeAngle()
+            # self.plotGimbalAngleAndAttitudeAngle()
             self.plotEulerMeAndCommandENU()
             self.createGif()
         else:
@@ -732,7 +773,7 @@ class PlotSingleRun:
 
 
 if __name__ == '__main__':
-    psr = PlotSingleRun('OEHG_test')
+    psr = PlotSingleRun(guidanceLawName = 'OEHG_test')
     psr.findLastDir()
     psr.loadData()
     psr.plotAll()
