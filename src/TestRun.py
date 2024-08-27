@@ -95,8 +95,6 @@ class SingleRun:
 
         self.useCamera = rospy.get_param('useCamera', False)
         self.cameraPitch = np.degrees(np.arctan((self.takeoffHeight - self.targetHeight) / self.guidanceLength))
-        
-        self.targetNOffset = 34
 
         if self.throttleTestOn: 
             self.takeoffHeight = self.throttleTestHeight
@@ -120,18 +118,21 @@ class SingleRun:
         self.yawRadENU = yawRadNED2ENU(self.yawRadNED)
         self.unitVectorEN = np.array([math.sin(self.yawRadNED), math.cos(self.yawRadNED)])
         self.unitVectorENU = np.concatenate([self.unitVectorEN, np.zeros(1)])
-        self.targetLla = NavSatFix(latitude=34.675701, longitude=109.849817, altitude=334.073267)
-        self.targetENU = localOffsetFromGpsOffset(self.targetLla, self.me.meRTKOrigin)
-        self.targetState = np.concatenate([self.guidanceLength * self.unitVectorEN, [self.targetHeight], np.zeros(3)])
-        self.targetState[1] += self.targetNOffset
+        if self.useCamera:
+            self.targetLla = NavSatFix(latitude=34.675701, longitude=109.849817, altitude=334.073267)
+            self.targetENU = localOffsetFromGpsOffset(self.targetLla, self.me.meRTKOrigin)
+            self.targetState = np.concatenate([self.guidanceLength * self.unitVectorEN, [self.targetHeight], np.zeros(3)])
+            self.targetNOffset = 34.0
+            self.targetState[1] += self.targetNOffset
+        else:
+            self.targetENU = np.concatenate([self.guidanceLength * self.unitVectorEN, np.zeros(1)]) 
+            self.targetState = np.concatenate([self.targetENU, np.zeros(3)])
         self.uTarget = np.array([0, 0, 0])
 
         self.u = None
         self.data = []
         self.z = None
-        self.zUse = []
-        self.endControlFlag = 0
-        self.real = False
+        self.zUse = [0.0, 0.0]
 
         self.measurementNoise = np.deg2rad(0.5)
 
@@ -143,9 +144,7 @@ class SingleRun:
 
         self.takeoffPointENU = np.array([0, 0, self.takeoffHeight])
         self.preparePointENU = self.targetENU - self.unitVectorENU * self.guidanceLength * 2
-        self.preparePointENU[2] = self.takeoffHeight - 6.0
-        # self.preparePointENU = np.concatenate([-self.unitVectorEN * self.guidanceLength, np.array([self.takeoffHeight - 3.0])])
-        # self.preparePointENU[1] += self.targetNOffset
+        self.preparePointENU[2] = self.takeoffHeight
         self.guidanceStartPointENU = self.preparePointENU + self.unitVectorENU * self.guidanceLength
         self.initialVelocityENU = np.array([
             self.expectedSpeed * np.sin(self.yawRadNED), 
