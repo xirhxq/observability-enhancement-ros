@@ -313,12 +313,15 @@ class SingleRun:
             if len(self.data) > 1:
                 self.MeasurementFiltering()
             self.ekf.newFrame(self.tStep, self.uTarget, self.zUse)
-        print(f"estimate position ENU = {pointString(self.ekf.x[:3])}")
-        self.u = self.guidanceLaw.getU(
-                    self.getRelativePosition(),
-                    self.getRelativeVelocity(), 
-                    self.me.getVelocityENU()
-                ).reshape(3)
+            print(f"estimate position ENU = {pointString(self.ekf.x[:3])}")
+            self.u = self.guidanceLaw.getU(
+                        self.getRelativePosition(),
+                        self.getRelativeVelocity(), 
+                        self.me.getVelocityENU()
+                    ).reshape(3)
+        else:
+            self.u = [0.0, 0.0, 0.0]
+
         print(f'uENU = {pointString(self.u)}')
         assert np.all(np.isfinite(self.u)), "u is not finite"
         
