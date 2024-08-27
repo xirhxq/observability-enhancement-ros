@@ -496,11 +496,6 @@ class SingleRun:
 
         print(f"Data saved to {self.fileName}")
 
-    def update(self, u):
-        self.me.update(u, self.tStep)
-        self.t += self.tStep
-        self.loopNum += 1
-
     def getMeasurement(self):
         if self.useCamera:
             lookAngle = self.getLookAngle()
