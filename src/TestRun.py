@@ -510,7 +510,7 @@ class SingleRun:
             lookAngle = self.getLookAngle()
             LOSdirectionCameraFRD = np.array([1, np.tan(lookAngle[1]), np.tan(lookAngle[0])])/np.linalg.norm(np.array([1, np.tan(lookAngle[1]), np.tan(lookAngle[0])]))
             LOSdirectionBodyFRD = camera2bodyFRDrotationMatrix(np.deg2rad(self.cameraPitch)) @ LOSdirectionCameraFRD
-            LOSdirectionNED = frd2nedRotationMatrix(self.me.meRPYRadNED) @ LOSdirectionBodyFRD
+            LOSdirectionNED = frd2nedRotationMatrix(self.me.meRPYRadNEDDelay) @ LOSdirectionBodyFRD
             LOSdirectionENU = ned2enu(LOSdirectionNED)
             self.z = np.array([np.arctan2(LOSdirectionENU[2], np.sqrt(LOSdirectionENU[0] ** 2 + LOSdirectionENU[1] ** 2)),
                             np.arctan2(LOSdirectionENU[1], LOSdirectionENU[0])])
