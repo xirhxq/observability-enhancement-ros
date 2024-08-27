@@ -180,7 +180,8 @@ class SingleRun:
 
         print(f"Simulation Condition: {self.takeoffHeight = }, {self.expectedSpeed = }, {self.targetState = }")
         print(f'{self.guidanceOn = }, {self.throttleTestOn = }')
-        print(f'{self.guidanceLawName = }, {self.me.useRTK = }')
+        print(f'{self.guidanceLawName = }, {self.me.useRTK = }, {self.useCamera = }')
+        print(f'{self.safetyDistance = }')
         print(f'Target @ {pointString(self.targetENU)}')
         print(f'Prepare @ {pointString(self.preparePointENU)}, guidance start @ {pointString(self.guidanceStartPointENU)}')
 
@@ -415,7 +416,7 @@ class SingleRun:
             # self.me.velocityENUControl(self.initialVelocityENU, self.yawRadENU)
             vErrorENU = self.initialVelocityENU - self.me.meVelocityENU
             amccCd = np.array([self.boostPID[i].compute(vErrorENU[i]) for i in range(3)])
-            print(f"velocityCtrlCommand = {pointString(amccCd)}")
+            print(f"boostVelocityCtrlCommand = {pointString(amccCd)}")
             thrust, self.cmdRPYRadENU = accENUYawENU2EulerENUThrust(
                 accENU= amccCd, 
                 yawRadENU=self.yawRadENU, 
