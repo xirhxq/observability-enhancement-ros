@@ -15,7 +15,7 @@ def plot3dTrajectoryENU():
         
     for testNum, mePositions in enumerate(allMePositions):
         mePositions = np.array(mePositions)
-        ax.plot(mePositions[:, 0], mePositions[:, 1], mePositions[:, 2], linewidth=2.0,
+        ax.plot(mePositions[:, 0], mePositions[:, 1], mePositions[:, 2], color = colorsUse[testNum], linewidth=2.0,
                 label=f'test {testNum + 1}')
         
     ax.set_xlabel('X (m)')
@@ -38,11 +38,11 @@ def plotTargetPositionErrorENU():
         ekfState = np.array(allEkfStates[testNum])
         targetPosition = np.array(targetPosition)
         targetPositionError = np.abs(ekfState[:, :3] - targetPosition)
-        ax[0].plot(time[:], targetPositionError[:, 0], linewidth=2.0,
+        ax[0].plot(time[:], targetPositionError[:, 0], color = colorsUse[testNum], linewidth=2.0,
                 label=f'test {testNum + 1}')
-        ax[1].plot(time[:], targetPositionError[:, 1], linewidth=2.0,
+        ax[1].plot(time[:], targetPositionError[:, 1], color = colorsUse[testNum], linewidth=2.0,
                 label=f'test {testNum + 1}')
-        ax[2].plot(time[:], targetPositionError[:, 2], linewidth=2.0,
+        ax[2].plot(time[:], targetPositionError[:, 2], color = colorsUse[testNum], linewidth=2.0,
                 label=f'test {testNum + 1}')
     
     for num,direction in enumerate(['East position', 'North position', 'Up position']):
@@ -63,11 +63,11 @@ def plotTargetVelocityErrorENU():
         ekfState = np.array(allEkfStates[testNum])
         targetVelocity = np.array(targetVelocity)
         targettargetVelocityError = np.abs(ekfState[:, 3:] - targetVelocity)
-        ax[0].plot(time[:], targettargetVelocityError[:, 0], linewidth=2.0,
+        ax[0].plot(time[:], targettargetVelocityError[:, 0], color = colorsUse[testNum], linewidth=2.0,
                 label=f'test {testNum + 1}')
-        ax[1].plot(time[:], targettargetVelocityError[:, 1], linewidth=2.0,
+        ax[1].plot(time[:], targettargetVelocityError[:, 1], color = colorsUse[testNum], linewidth=2.0,
                 label=f'test {testNum + 1}')
-        ax[2].plot(time[:], targettargetVelocityError[:, 2], linewidth=2.0,
+        ax[2].plot(time[:], targettargetVelocityError[:, 2], color = colorsUse[testNum], linewidth=2.0,
                 label=f'test {testNum + 1}')
     
     for num,direction in enumerate(['East velocity', 'North velocity', 'Up velocity']):
