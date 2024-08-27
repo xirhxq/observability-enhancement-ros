@@ -296,16 +296,6 @@ class SingleRun:
             print('Time limit exceeded, guidance end!')
             self.toStepLand()
             return
-        
-        if np.linalg.norm(self.getRelativePosition()) <= 0.1:
-            print('Less than safety distance to estimated target, guidance end!')
-            self.toStepHover()
-            return
-        
-        if self.me.mePositionENU[2] <= self.targetState[2]:
-            print('Lower than estimated target, guidance end!')
-            self.toStepHover()
-            return
 
         if not self.safetyModule():
             self.toStepHover()
@@ -458,6 +448,12 @@ class SingleRun:
         self.me.printMe()
 
     def safetyModule(self):
+        if np.linalg.norm(self.getRelativePosition()) <= 0.1:
+            print('Less than 0.1m to estimated target, guidance end!')
+            return False
+        if self.me.mePositionENU[2] <= self.ekf.x[2]:
+            print('Lower than estimated target, guidance end!')
+            return False
         if self.me.underHeight(self.safetyMinHeight):
             print('Safety module: too low, quit guidance...')
             return False
