@@ -530,15 +530,11 @@ class SingleRun:
             print(f"measurementsDegLimit = {np.rad2deg(self.z)}")
             if self.outliers:
                 self.addOutliers()
-
-        if self.loopNum > np.floor(self.timeDelay / self.tStep):
-            if self.timeDelay > 0:
-                self.ekf.getMeState(
-                    self.data[int(self.loopNum - np.floor(self.timeDelay / self.tStep) - 1)]['mePositionENU'])
-                self.zUse = self.data[int(self.loopNum - np.floor(self.timeDelay / self.tStep) - 1)]['measurement']
-            else:
-                self.ekf.getMeState(self.me.getPositionENU())
-                self.zUse = self.z
+            if self.loopNum > np.floor(self.timeDelay / self.tStep):
+                if self.timeDelay > 0:          
+                    self.zUse = self.data[int(self.loopNum - np.floor(self.timeDelay / self.tStep) - 1)]['measurement']
+                else:
+                    self.zUse = self.z
 
     def MeasurementFiltering(self):
         print('With measurementfiltering......')
