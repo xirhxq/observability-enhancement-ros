@@ -81,15 +81,50 @@ def plotTargetVelocityErrorENU():
     plt.close()
     print(f"Saved target_velocity_error plot at {output_image_path}")
 
+def plotMeasurementUseAndLosAngle():
+    fig, ax = plt.subplots(2, 1, figsize=(8, 10))
+    for testNum, targetPosition in enumerate(allTargetPositions):
+        time = np.array(allTimes[testNum])
+        targetPosition = np.array(targetPosition)
+        mePosition = np.array(allMePositions[testNum])
+        measurementUse = np.array(allMeasurementUse[testNum])
+        timeDelay = np.array(allTimeDelay[testNum])
+        timeStep = np.array(allTimeStep[testNum])
+        num_data_points = len(mePosition)
+        relativePosition = np.zeros((3, num_data_points))
+        losAngle = np.zeros((2, num_data_points))
+        for i in range(num_data_points):
+            relativePosition[:, i] = targetPosition[i, :] - mePosition[i, :]
+            losAngle[:, i] = np.array([
+                np.arctan2(relativePosition[2, i], np.sqrt(relativePosition[0, i] ** 2 + relativePosition[1, i] ** 2)),
+                np.arctan2(relativePosition[1, i], relativePosition[0, i])
+            ])
+        for num, direction in enumerate(['elevation angle', 'azimuth angle']):
+            ax[num].plot(time[int(timeDelay / timeStep):], np.rad2deg(measurementUse[:, num]), color = colorsUse[testNum], linestyle='-', linewidth=2.0,
+                        label=f'test {testNum + 1}:'+'Measurement of ' + direction)
+            ax[num].plot(time, np.rad2deg(losAngle[num, :]), color = colorsUse[testNum], linestyle='--', linewidth=2.0,
+                        label=f'test {testNum + 1}:'+'Real ' + direction)
+            ax[num].set_xlabel('Time (s)')
+            ax[num].set_ylabel('Angle (deg)')
+            ax[num].legend(loc='lower left')
+
+    output_image_path = os.path.join(root_dir, 'measurement_use_and_los_angle.png')
+    plt.savefig(output_image_path, bbox_inches='tight')
+    plt.close()
+    print(f"Saved target_position_error plot at {output_image_path}")
+
 script_dir = os.path.dirname(os.path.realpath(__file__))
 root_dir = script_dir
 
 allTimes = []
+allTimeDelay = []
+allTimeStep = []
 allMePositions = []
 allTargetPositions = []
 allTargetVelocitys = []
 allEkfStates = []
-
+allMeasurementUse = []
+colorsUse = plt.rcParams['axes.prop_cycle'].by_key()['color']
 for subdir, dirs, files in os.walk(root_dir):
     for file in files:
         if file == 'data.pkl':
@@ -101,20 +136,31 @@ for subdir, dirs, files in os.walk(root_dir):
                 targetPositions = []
                 targetVelocitys = []
                 ekfStates = []
-
+                measurementUse = []
+                timeDelay = []
+                timeStep = []
                 for data in data_list:
                     times.append(data['t'])
+                    timeDelay.append(data['timeDelay'])
+                    timeStep.append(data['tStep'])
                     mePositions.append(data['mePositionENU'])
                     targetPositions.append(data['targetPosition'])
                     targetVelocitys.append(data['targetVelocity'])
                     ekfStates.append(data['ekfState'])
-
+                    if not len(data['measurementUse']) == 0:
+                        if data['measurementUse'][1] < 0:
+                            data['measurementUse'][1] += 2 * np.pi
+                        measurementUse.append(data['measurementUse'])
                 allTimes.append(times)
+                allTimeDelay.append(timeDelay[0])
+                allTimeStep.append(timeStep[0])
                 allMePositions.append(mePositions)
                 allTargetPositions.append(targetPositions)
                 allTargetVelocitys.append(targetVelocitys)
                 allEkfStates.append(ekfStates)
-                
+                allMeasurementUse.append(measurementUse)
+
+plotMeasurementUseAndLosAngle()    
 plot3dTrajectoryENU()
 plotTargetPositionErrorENU()
 plotTargetVelocityErrorENU()
