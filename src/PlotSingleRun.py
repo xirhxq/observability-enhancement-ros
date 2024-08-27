@@ -240,6 +240,21 @@ class PlotSingleRun:
         plt.savefig(os.path.join(self.folderPath, 'EulerMeAndCommand.png'))
         plt.close()
 
+    def plotLosRate(self):
+        self.createFigure()
+
+        time = [d['t'] for d in self.data]
+        losRate = np.zeros((3, len(self.data)))
+        losRateNorm = np.zeros(len(self.data))
+
+        for i in range(len(self.data)):
+            losRate[:, i] = np.squeeze(self.data[i]['lambda'])
+            losRateNorm[i] = np.linalg.norm(losRate[:, i])
+
+        plt.plot(time, losRateNorm)
+        plt.savefig(os.path.join(self.folderPath, 'losRateNorm.png'))
+        plt.close()
+
     def plotAttitudeMeENU(self):
         self.createFigure()
 
@@ -733,6 +748,8 @@ class PlotSingleRun:
 
     def plotAll(self):
         if self.useGroundTruth:
+            self.printMissDistance()
+            self.plotLosRate()
             self.plotMeasurementUseAndLosAngle()
             self.plotLookAngleScatterWithTime()
             self.plotLookAngleWithTime()
