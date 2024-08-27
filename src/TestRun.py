@@ -519,6 +519,7 @@ class SingleRun:
             self.z[0] = rad_round(self.z[0])
             self.z[1] = rad_round(self.z[1])
             print(f"measurementsDegLimit = {np.rad2deg(self.z)}")
+            self.zUse = self.z
         else:
             relPos = self.getRelativePosition(True)
             self.z = np.array([np.arctan2(relPos[2], np.sqrt(relPos[0] ** 2 + relPos[1] ** 2)),
