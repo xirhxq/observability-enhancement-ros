@@ -302,6 +302,13 @@ class SingleRun:
             return
             
         self.getMeasurement()
+
+        if self.timeDelay > 0:
+            self.ekf.getMeState(
+                    self.data[int(self.loopNum - np.floor(self.timeDelay / self.tStep) - 1)]['mePositionENU'])
+        else:
+            self.ekf.getMeState(self.me.getPositionENU())
+
         if self.loopNum > np.floor(self.timeDelay / self.tStep): 
             if len(self.data) > 1:
                 self.MeasurementFiltering()
