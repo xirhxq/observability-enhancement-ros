@@ -668,6 +668,14 @@ class PlotSingleRun:
         plt.savefig(os.path.join(self.folderPath, 'measurementUseAndLosAngle.png'))
         plt.close()
 
+    def printMissDistance(self):
+        time = [d['t'] for d in self.data]
+        missDistance = [d['missDistance'] for d in self.data]
+        plt.plot(time, missDistance)
+        plt.savefig(os.path.join(self.folderPath, 'missDistance.png'))
+        plt.close()
+        print(f"miss distance = {missDistance[-1]}")
+
     def createGif(self):
         frames = np.arange(start=0, stop=len(self.data), step=1)
         tq = tqdm.tqdm(total=len(frames))
