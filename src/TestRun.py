@@ -303,7 +303,7 @@ class SingleRun:
             
         self.getMeasurement()
         if self.loopNum > np.floor(self.timeDelay / self.tStep): 
-            if (len(self.data) > 1 ) and (not len(self.data[-1]['measurementUse']) == 0 ):
+            if len(self.data) > 1:
                 self.MeasurementFiltering()
             self.ekf.newFrame(self.tStep, self.uTarget, self.zUse)
         print(f"estimate position ENU = {pointString(self.ekf.x[:3])}")
@@ -530,9 +530,11 @@ class SingleRun:
                 self.zUse = self.z
 
     def MeasurementFiltering(self):
-        if rad_round(np.abs(self.zUse[0] - self.data[-1]['measurementUse'][0])) > np.deg2rad(8) or \
-                rad_round(np.abs(self.zUse[1] - self.data[-1]['measurementUse'][1])) > np.deg2rad(8):
-            self.zUse = self.data[-2]['measurementUse']
+        print('With measurementfiltering......')
+        if (not (self.data[-1]['measurementUse'][0] == 0.0 and self.data[-1]['measurementUse'][1] == 0.0)) and \
+            (rad_round(np.abs(self.zUse[0] - self.data[-1]['measurementUse'][0])) > np.deg2rad(8) or \
+            rad_round(np.abs(self.zUse[1] - self.data[-1]['measurementUse'][1])) > np.deg2rad(8)):
+                self.zUse = self.data[-2]['measurementUse']
 
     def getRelativePosition(self, real = False):
         if real:
