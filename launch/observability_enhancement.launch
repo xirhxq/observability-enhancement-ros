@@ -36,7 +36,7 @@
 
     <!-- Measurement arguments -->
     <arg name="outliers" default="false"/>
-    <arg name="timeDelay" default="0.0"/>
+    <arg name="timeDelay" default="0.15"/>
     <arg name="useCamera" default="true"/>
 
     <!-- Throttle Test arguments -->
