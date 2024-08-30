@@ -200,6 +200,8 @@ class M300:
             else:
                 rospy.logerr("set rtk origin failed!")
                 return False
+        else:
+            self.meRTKOrigin = 'unused'
         # rospy.wait_for_service(self.set_local_pos_reference.resolved_name)
         try:
             response = self.set_local_pos_reference()
