@@ -818,8 +818,10 @@ class SingleRun:
 def main():
     sr = SingleRun()
     sr.run()
-    rospy.signal_shutdown('Shutting down')
-    sr.spinThread.join()
+
+    if sr.model == 'M300':
+        rospy.signal_shutdown('Shutting down')
+        sr.spinThread.join()
 
     print('Run ended, start plotting')
 
