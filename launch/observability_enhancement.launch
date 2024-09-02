@@ -1,10 +1,16 @@
 <launch>
+    <!-- Model Choice -->
+    <arg name="model" default="M300"/>
+
     <!-- Guidance Law Choice -->
     <arg name="guidanceOn" default="true"/>
     <arg name="GL" default="OEHG_test"/>
 
     <!-- Use RTK -->
     <arg name="useRTK" default="true"/>
+
+    <!-- Monte Carlo-->
+    <arg name="monteCarlo" default="false"/>
 
     <!-- Core arguments -->
     <arg name="expectedSpeed" default="1.0"/>
@@ -46,10 +52,14 @@
     <arg name="throttleTestMin" default="25.0"/>
     <arg name="throttleTestMax" default="40.0"/>
 
+    <param name="model" value="$(arg model)"/>
+
     <param name="guidanceOn" value="$(arg guidanceOn)"/>
     <param name="GL" value="$(arg GL)"/>
 
     <param name="useRTK" value="$(arg useRTK)"/>
+
+    <param name="monteCarlo" value="$(arg monteCarlo)"/>
 
     <param name="expectedSpeed" value="$(arg expectedSpeed)"/>
     <param name="takeoffHeight" value="$(arg takeoffHeight)"/>
