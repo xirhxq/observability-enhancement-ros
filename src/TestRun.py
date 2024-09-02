@@ -24,6 +24,9 @@ from GuidanceLaws.PN_test import PN_test
 from GuidanceLaws.OEG import OEG
 from GuidanceLaws.RAIM import RAIM
 from PlotSingleRun import PlotSingleRun
+from .models.DoubleIntegrate import DoubleIntegrate
+from .models.FixedWing import FixedWing
+from .models.Iris import Iris
 
 import builtins
 from rich.console import Console
