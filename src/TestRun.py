@@ -184,11 +184,17 @@ class SingleRun:
         self.loopNum = 1
         self.t = 0
         self.nn = 3
+        
+        self.yawRadNED = np.deg2rad(self.yawDegNED)
+        self.yawRadENU = yawRadNED2ENU(self.yawRadNED)
+        self.unitVectorEN = np.array([math.sin(self.yawRadNED), math.cos(self.yawRadNED)])
+        self.unitVectorENU = np.concatenate([self.unitVectorEN, np.zeros(1)])
 
-        rospy.init_node(self.algorithmName, anonymous=True)
-        self.me = M300('suav')
-        self.spinThread = threading.Thread(target=lambda: rospy.spin())
-        self.spinThread.start()
+        if self.model == 'M300':
+            rospy.init_node(self.algorithmName, anonymous=True)
+            self.me = M300('suav')
+            self.spinThread = threading.Thread(target=lambda: rospy.spin())
+            self.spinThread.start()
 
             print(f'Wait for GPS Origin')
             while not rospy.is_shutdown() and (self.me.meRTKOrigin is None and self.me.meOrigin is None):
@@ -196,13 +202,34 @@ class SingleRun:
                 self.me.set_local_position()
             print(f'Get GPS origin!')
 
-        self.yawRadNED = np.deg2rad(self.yawDegNED)
-        self.yawRadENU = yawRadNED2ENU(self.yawRadNED)
-        self.unitVectorEN = np.array([math.sin(self.yawRadNED), math.cos(self.yawRadNED)])
-        self.unitVectorENU = np.concatenate([self.unitVectorEN, np.zeros(1)])
+            rospack = rospkg.RosPack()
+            self.packagePath = rospack.get_path(self.algorithmName)
+        elif self.model == 'Iris':
+            rclpy.init()
+            self.me = Iris()
+            self.spinThread = threading.Thread(target=lambda: rclpy.spin(self.me))
+            self.spinThread.start()
+            
+            self.packagePath = get_package_share_directory(self.algorithmName)
+        elif self.model == 'FixedWing':
+            # ENU
+            if not self.monteCarlo:
+                self.me = FixedWing(np.array([[0.0], [0.0], [self.takeoffHeight]]),
+                                        np.array([[0.0], [self.yawRadENU], [0.0]]), self.expectedSpeed)
+            else:
+                self.me = FixedWing(np.array([[0], [0], [self.takeoffHeight]]) + np.random.randn(3, 1) * 20,
+                                        np.array([[0.0], [self.yawRadENU], [0.0]]), self.expectedSpeed)
+            self.packagePath = os.getcwd()
+        elif self.model == 'DoubleInt':
+            self.me = DoubleIntegrate(np.array([[0.0], [0.0], [self.takeoffHeight]]), self.expectedSpeed * self.unitVectorENU.reshape(3,1))
+            self.packagePath = os.getcwd()
+
         if self.useCamera:
             self.targetLla = NavSatFix(latitude=34.675701, longitude=109.849817, altitude=334.073267)
-            self.targetENU = localOffsetFromGpsOffset(self.targetLla, self.me.meRTKOrigin)
+            if self.me.useRTK:
+                self.targetENU = localOffsetFromGpsOffset(self.targetLla, self.me.meRTKOrigin)
+            else:
+                self.targetENU = localOffsetFromGpsOffset(self.targetLla, self.me.meOrigin)
             self.targetState = np.concatenate([self.guidanceLength * self.unitVectorEN, [self.targetHeight], np.zeros(3)])
             self.targetNOffset = 34.0
             self.targetState[1] += self.targetNOffset
@@ -288,10 +315,14 @@ class SingleRun:
             raise ValueError("Invalid guidance law name")
 
         # Save parameters to file
-        params = rospy.get_param('/')
-
-        with open(os.path.join(self.folderName, 'params.json'), 'w') as f:
-            json.dump(params, f, indent=4)
+        if self.model == 'M300':
+            params = rospy.get_param('/')
+            with open(os.path.join(self.folderName, 'params.json'), 'w') as f:
+                json.dump(params, f, indent=4)
+        elif self.model == 'Iris':
+            params = self.get_parameters_by_prefix('/')
+            with open(os.path.join(self.folderName, 'params.json'), 'w') as f:
+                json.dump(params, f, indent=4)
 
     def getTimeNow(self):
         return time.time()
@@ -579,8 +610,44 @@ class SingleRun:
             self.me.sendHeartbeat()
             self.controlStateMachine()
 
-            time.sleep(self.tStep)
-            self.t += self.tStep
+                time.sleep(self.tStep)
+                self.t += self.tStep
+        elif self.model == 'Iris':
+            while self.state != State.END:
+                self.taskTime = time.time() - self.taskStartTime
+                self.stateTime = time.time() - self.stateStartTime
+
+                self.print()
+
+                self.me.sendHeartbeat()
+                self.controlStateMachine()
+
+                time.sleep(self.tStep)
+                self.t += self.tStep
+        else:
+            for t in np.arange(0, self.tUpperLimit + self.tStep, self.tStep):
+                self.getMeasurement()
+                if self.loopNum > np.floor(self.timeDelay / self.tStep):
+                    if (not len(self.data) == 0) and (not len(self.data[-1]['measurementUse']) == 0):
+                        self.MeasurementFiltering()
+                    if np.linalg.norm(self.getRelativePosition()) > 10 and self.endControlFlag == 0:
+                        self.ekf.newFrame(self.tStep, self.uTarget, self.zUse)
+                if np.linalg.norm(self.getRelativePosition()) > 10 and self.endControlFlag == 0:
+                    self.u = self.guidanceLaw.getU(self.getRelativePosition(), self.getRelativeVelocity(),
+                                                   self.me.getVelocityENU())
+                else:
+                    self.u = np.array([[0], [0], [0]])
+                    self.endControlFlag = 1
+                assert np.all(np.isfinite(self.u)), "u is not finite"
+                self.log()
+                self.update(self.u)
+                if self.getCloseVelocity() < 0:
+                    break
+
+    def update(self, u):
+        self.me.update(u, self.tStep)
+        self.t += self.tStep
+        self.loopNum += 1
 
     def saveLog(self):
         self.fileName = os.path.join(self.folderName, 'data.pkl')
