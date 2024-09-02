@@ -1,3 +1,11 @@
+if(NOT DEFINED ENV{AMENT_PREFIX_PATH})
+
+execute_process(
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          ${CMAKE_SOURCE_DIR}/package_ros1.xml
+          ${CMAKE_BINARY_DIR}/package.xml
+  )
+
 cmake_minimum_required(VERSION 3.0.2)
 project(observability_enhancement)
 
@@ -26,3 +34,11 @@ target_link_libraries(constants
   djiosdk-core.a
   dji-linker.a
 )
+
+else()
+execute_process(
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          ${CMAKE_SOURCE_DIR}/package_ros2.xml
+          ${CMAKE_BINARY_DIR}/package.xml
+  )
+endif()
