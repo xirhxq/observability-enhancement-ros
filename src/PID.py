@@ -16,24 +16,24 @@ class PID:
 
     def compute(self, errProportion, errPhysicalDiff=None):
         
-        # 计算时间差
+        # Calculate time difference
         if (self.__timePrevious is None):         
             dt = 0.0   
         else:
             dt = rospy.Time.now().to_sec() - self.__timePrevious
         
-        # 计算误差积分项 self.__errIntegral
+        # Calculate the error integral term self.__errIntegral
         self.__errIntegral = self.__errIntegral + errProportion * dt
 
-        # 防止积分项饱和
+        # Prevent integration terms from saturating
         if (self.__intMax is not None and self.__errIntegral > self.__intMax):
             self.__errIntegral = self.__intMax
         elif (self.__intMin is not None and self.__errIntegral < self.__intMin):
             self.__errIntegral = self.__intMin
 
-        # 计算误差微分项 errDiff
+        # Calculate the differential term of the error errDiff
         if (dt != 0.0):
-            # 如果有物理上的微分项输入，则使用物理上的微分项，否则使用数值微分项
+            # If there is a physical differential term input, the physical differential term is used, otherwise the numerical differential term is used
             if (errPhysicalDiff is None):
                 errDiff = (errProportion - self.__errPrevious) / dt
             else:
@@ -41,10 +41,10 @@ class PID:
         else:
             errDiff = 0.0
         
-        # PID 计算
+        # PID command
         output = self.kp * errProportion + self.ki * self.__errIntegral + self.kd * errDiff
 
-        # 保存这一时刻的误差和时间戳
+        # Save the error and timestamp for this moment
         self.__errPrevious = errProportion
         self.__timePrevious = rospy.Time.now().to_sec() 
 
