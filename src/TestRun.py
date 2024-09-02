@@ -272,7 +272,7 @@ class SingleRun:
             self.packagePath, 
             'data', 
             self.timeStr, 
-            self.guidanceLawName
+            self.guidanceLawName + '_' + self.model
         )
         os.makedirs(self.folderName, exist_ok=True)
         self.ekf = EKF(self.targetState, self.measurementNoise)
