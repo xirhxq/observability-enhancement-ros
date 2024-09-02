@@ -717,7 +717,7 @@ class SingleRun:
 
     def getRelativePosition(self, real = False):
         if real:
-            relativePosition = self.targetState[:3] - self.me.getPositionENU()
+            relativePosition = self.targetENU[:3] - self.me.getPositionENU()
         else:
             relativePosition = self.ekf.x[:3] - self.me.getPositionENU()
         return relativePosition
