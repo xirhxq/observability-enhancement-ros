@@ -373,8 +373,9 @@ class SingleRun:
 
     @stepEntrance
     def toStepHover(self):
+        self.state = State.HOVER
+        self.hoverPID = [PID(kp=1.0, ki=0.1, kd=0.0), PID(kp=1.0, ki=0.1, kd=0.0), PID(kp=1.0, ki=0.1, kd=0.0)]
         self.me.setAttitudeControlMode()
-        self.boostPID = [PID(kp=1.0, ki=0.1, kd=0.0), PID(kp=1.0, ki=0.1, kd=0.0), PID(kp=1.0, ki=0.1, kd=0.0)]
 
     def stepInit(self):
         if self.model == 'M300':
@@ -550,18 +551,16 @@ class SingleRun:
             self.me.hoverWithYaw(self.yawRadENU)
         elif self.model == 'Iris':
             vErrorENU = [0.0, 0.0, 0.0] - self.me.meVelocityENU
-            amccCd = np.array([self.boostPID[i].compute(vErrorENU[i]) for i in range(3)])
-            print(f"boostVelocityCtrlCommand = {pointString(amccCd)}")
+            amccCd = np.array([self.hoverPID[i].compute(vErrorENU[i]) for i in range(3)])
+            print(f"hoverVelocityCtrlCommand = {pointString(amccCd)}")
             thrust, self.cmdRPYRadENU = accENUYawENU2EulerENUThrust(
                 accENU= amccCd, 
                 yawRadENU=self.yawRadENU, 
                 hoverThrottle=self.me.hoverThrottle
             )
             self.me.acc2attENUControl(thrust, self.cmdRPYRadENU)
-        if np.dot(self.me.mePositionENU - self.guidanceStartPointENU, self.unitVectorENU) > 0:
-            print(f"stepGuidanceInitialMePositionNED = {self.me.mePositionNED}")
-            print(f"stepGuidanceInitialMeVelocityNED = {self.me.meVelocityNED}")
-            self.toStepGuidance()
+        if self.stateTime >= 5.0:
+            self.toStepBack()
 
     def controlStateMachine(self):
         if self.state == State.INIT:
