@@ -265,8 +265,6 @@ class SingleRun:
         self.cmdRPYRadENU = np.zeros(3)
         self.cmdRPYRadNED = np.zeros(3)
 
-        rospack = rospkg.RosPack()
-        self.packagePath = rospack.get_path(self.algorithmName)
         self.timeStr = kwargs.get('prefix', datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
         self.folderName = os.path.join(
             self.packagePath, 
@@ -335,7 +333,13 @@ class SingleRun:
     @stepEntrance
     def toStepPrepare(self):
         self.state = State.PREPARE
-        self.me.setVelocityControlMode()
+        self.me.setPositionControlMode()
+    
+    @stepEntrance
+    def toStepBoost(self):
+        self.state = State.BOOST
+        self.boostPID = [PID(kp=1.0, ki=0.1, kd=0.0), PID(kp=1.0, ki=0.1, kd=0.0), PID(kp=1.0, ki=0.1, kd=0.0)]
+        self.me.setAttitudeControlMode()
 
     @stepEntrance
     def toStepGuidance(self):
@@ -404,6 +408,23 @@ class SingleRun:
         print(f'Distance to point: {self.me.distanceToPointENU(self.preparePointENU):.2f}')
         if self.me.nearPositionENU(self.preparePointENU) and self.me.nearSpeed(0):
             self.toStepBoost()
+
+    def stepBoost(self):
+        if self.reallyTakeoff:
+            # self.me.velocityENUControl(self.initialVelocityENU, self.yawRadENU)
+            vErrorENU = self.initialVelocityENU - self.me.meVelocityENU
+            amccCd = np.array([self.boostPID[i].compute(vErrorENU[i]) for i in range(3)])
+            print(f"boostVelocityCtrlCommand = {pointString(amccCd)}")
+            thrust, self.cmdRPYRadENU = accENUYawENU2EulerENUThrust(
+                accENU= amccCd, 
+                yawRadENU=self.yawRadENU, 
+                hoverThrottle=self.me.hoverThrottle
+            )
+            self.me.acc2attENUControl(thrust, self.cmdRPYRadENU)
+        if np.dot(self.me.mePositionENU - self.guidanceStartPointENU, self.unitVectorENU) > 0:
+            print(f"stepGuidanceInitialMePositionNED = {self.me.mePositionNED}")
+            print(f"stepGuidanceInitialMeVelocityNED = {self.me.meVelocityNED}")
+            self.toStepGuidance()
 
     def stepGuidance(self):
         if self.stateTime >= 100.0:
