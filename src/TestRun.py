@@ -368,14 +368,11 @@ class SingleRun:
         self.changeTime = self.throttleTestChangeTime
         self.changeStep = self.throttleTestChangeTime
         self.throttleTestAdjustPosition = False
+        self.me.setAttitudeControlMode()
 
     @stepEntrance
     def toStepHover(self):
-        self.state = State.HOVER
-
-    @stepEntrance
-    def toStepBoost(self):
-        self.state = State.BOOST
+        self.me.setAttitudeControlMode()
         self.boostPID = [PID(kp=1.0, ki=0.1, kd=0.0), PID(kp=1.0, ki=0.1, kd=0.0), PID(kp=1.0, ki=0.1, kd=0.0)]
 
     def stepInit(self):
