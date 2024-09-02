@@ -376,14 +376,21 @@ class SingleRun:
         self.boostPID = [PID(kp=1.0, ki=0.1, kd=0.0), PID(kp=1.0, ki=0.1, kd=0.0), PID(kp=1.0, ki=0.1, kd=0.0)]
 
     def stepInit(self):
-        if not self.reallyTakeoff:
+        if self.model == 'M300':
+            if not self.reallyTakeoff:
+                self.toStepTakeoff()
+                return
+            if not self.me.obtain_control() or not self.me.monitored_takeoff():
+                self.toStepLand()
+                return
+            print('Initialization completed')
             self.toStepTakeoff()
-            return
-        if not self.me.obtain_control() or not self.me.monitored_takeoff():
-            self.toStepLand()
-            return
-        print('Initialization completed')
-        self.toStepTakeoff()
+        elif self.model == 'Iris': 
+            self.me.intoOffboardMode()
+            self.me.arm()
+            if self.me.isArmed():
+                print('Initialization completed')
+                self.toStepTakeoff()
 
     def stepTakeoff(self):
         if self.reallyTakeoff:
@@ -538,14 +545,10 @@ class SingleRun:
 
     def stepHover(self):
         # self.getMeasurement()
-        self.me.hoverWithYaw(self.yawRadENU)
-        if self.stateTime >= 5.0:
-            self.toStepBack()
-
-    def stepBoost(self):
-        if self.reallyTakeoff:
-            # self.me.velocityENUControl(self.initialVelocityENU, self.yawRadENU)
-            vErrorENU = self.initialVelocityENU - self.me.meVelocityENU
+        if self.model == 'M300':
+            self.me.hoverWithYaw(self.yawRadENU)
+        elif self.model == 'Iris':
+            vErrorENU = [0.0, 0.0, 0.0] - self.me.meVelocityENU
             amccCd = np.array([self.boostPID[i].compute(vErrorENU[i]) for i in range(3)])
             print(f"boostVelocityCtrlCommand = {pointString(amccCd)}")
             thrust, self.cmdRPYRadENU = accENUYawENU2EulerENUThrust(
@@ -619,14 +622,15 @@ class SingleRun:
         return True
 
     def run(self):
-        while self.state != State.END and not rospy.is_shutdown():
-            self.taskTime = time.time() - self.taskStartTime
-            self.stateTime = time.time() - self.stateStartTime
+        if self.model == 'M300':
+            while self.state != State.END and not rospy.is_shutdown():
+                self.taskTime = time.time() - self.taskStartTime
+                self.stateTime = time.time() - self.stateStartTime
 
-            self.print() 
+                self.print() 
 
-            self.me.sendHeartbeat()
-            self.controlStateMachine()
+                self.me.sendHeartbeat()
+                self.controlStateMachine()
 
                 time.sleep(self.tStep)
                 self.t += self.tStep
