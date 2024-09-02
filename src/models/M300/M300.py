@@ -33,7 +33,8 @@ class M300:
 
         self.flight_status = 255
         self.display_mode = 255
-
+        
+        self.meOrigin = None
         self.meRTKOrigin = None
         self.meRTKLla = None
         self.meGPSLla = None
@@ -201,7 +202,7 @@ class M300:
                 rospy.logerr("set rtk origin failed!")
                 return False
         else:
-            self.meRTKOrigin = 'unused'
+            self.meOrigin = self.current_gps_pos
         # rospy.wait_for_service(self.set_local_pos_reference.resolved_name)
         try:
             response = self.set_local_pos_reference()

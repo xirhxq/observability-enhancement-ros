@@ -111,11 +111,11 @@ class SingleRun:
         self.spinThread = threading.Thread(target=lambda: rospy.spin())
         self.spinThread.start()
 
-        print(f'Wait for GPS Origin')
-        while not rospy.is_shutdown() and self.me.meRTKOrigin is None:
-            time.sleep(0.1)
-            self.me.set_local_position()
-        print(f'Get GPS origin!')
+            print(f'Wait for GPS Origin')
+            while not rospy.is_shutdown() and (self.me.meRTKOrigin is None and self.me.meOrigin is None):
+                time.sleep(0.1)
+                self.me.set_local_position()
+            print(f'Get GPS origin!')
 
         self.yawRadNED = np.deg2rad(self.yawDegNED)
         self.yawRadENU = yawRadNED2ENU(self.yawRadNED)
