@@ -286,6 +286,7 @@ class SingleRun:
         builtins.print = custom_print
 
         print(f"Simulation Condition: {self.takeoffHeight = }, {self.expectedSpeed = }, {self.targetState = }")
+        print(f"{self.model = }")
         print(f'{self.guidanceOn = }, {self.throttleTestOn = }')
         print(f'{self.guidanceLawName = }, {self.me.useRTK = }, {self.useCamera = }')
         print(f'{self.safetyDistance = }')
@@ -789,7 +790,6 @@ class SingleRun:
         currentData['meRPYNED'] = copy.copy(self.me.meRPYRadNED)
         currentData['cmdRPYENU'] = copy.copy(self.cmdRPYRadENU)
         currentData['cmdRPYNED'] = copy.copy(self.cmdRPYRadNED)
-        currentData['meAccelerationFusedNED'] = copy.copy(enu2ned(self.me.meAccelerationENUFused))
         currentData['meAccelerationNED'] = copy.copy(self.me.getAccelerationNED())
         currentData['meAcceCommandNED'] = copy.copy(self.cmdAccNED)
         currentData['relativePosition'] = copy.copy(self.getRelativePosition())
@@ -806,10 +806,13 @@ class SingleRun:
             self.ekf.x - np.concatenate([self.me.getPositionENU(), self.me.getVelocityENU()]))
         currentData['measurement'] = copy.copy(self.z)
         currentData['measurementUse'] = copy.copy(self.zUse)
-        currentData['meGimbalRPYENURad'] = copy.copy(self.me.meGimbalRPYENURad)
-        currentData['meGPSLla'] = copy.copy(self.me.meGPSLla)
-        currentData['meRTKLla'] = copy.copy(self.me.meRTKLla)
-        
+        if self.model == 'M300':
+            currentData['meAccelerationFusedNED'] = copy.copy(enu2ned(self.me.meAccelerationENUFused))
+            currentData['meGPSLla'] = copy.copy(self.me.meGPSLla)
+            if self.me.useRTK:
+                currentData['meRTKLla'] = copy.copy(self.me.meRTKLla)
+            if self.useCamera:
+                currentData['meGimbalRPYENURad'] = copy.copy(self.me.meGimbalRPYENURad)
         self.data.append(currentData)
 
 
