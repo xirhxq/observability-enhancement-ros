@@ -4,11 +4,11 @@
     <arg name="GL" default="OEHG_test"/>
 
     <!-- Use RTK -->
-    <arg name="useRTK" default="true"/>
+    <arg name="useRTK" default="false"/>
 
     <!-- Core arguments -->
     <arg name="expectedSpeed" default="1.0"/>
-    <arg name="takeoffHeight" default="15.0"/>
+    <arg name="takeoffHeight" default="35.0"/>
     <arg name="targetHeight" default="0.0"/>
     <arg name="yawDegNED" default="270.0"/>
     <arg name="guidanceLength" default="45.0"/>
@@ -24,7 +24,7 @@
     <arg name="safetyMinDescendHeight" default="20.0"/>
     <arg name="safetyMaxDescendVelocity" default="8.0"/>
     <arg name="safetyMaxAscendVelocity" default="8.0"/>
-    <arg name="safetyDistance" default="12.0"/>
+    <arg name="safetyDistance" default="0.5"/>
     <arg name="safetyMaxSpeed" default="12.0"/>
 
     <!-- TAKEOFF OR NOT -->
@@ -37,11 +37,11 @@
     <!-- Measurement arguments -->
     <arg name="outliers" default="false"/>
     <arg name="timeDelay" default="0.15"/>
-    <arg name="useCamera" default="true"/>
+    <arg name="useCamera" default="false"/>
 
     <!-- Throttle Test arguments -->
     <arg name="throttleTestOn" default="true"/>
-    <arg name="throttleTestHeight" default="18.0"/>
+    <arg name="throttleTestHeight" default="35.0"/>
     <arg name="throttleTestChangeTime" default="0.5"/>
     <arg name="throttleTestMin" default="25.0"/>
     <arg name="throttleTestMax" default="40.0"/>

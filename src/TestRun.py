@@ -124,7 +124,7 @@ class SingleRun:
             self.targetNOffset = 34.0
             self.targetState[1] += self.targetNOffset
         else:
-            self.targetENU = np.concatenate([self.guidanceLength * self.unitVectorEN, np.zeros(1)]) 
+            self.targetENU = np.concatenate([self.guidanceLength * self.unitVectorEN, [20.0]]) 
             self.targetState = np.concatenate([self.targetENU, np.zeros(3)])
         self.uTarget = np.array([0, 0, 0])
 
