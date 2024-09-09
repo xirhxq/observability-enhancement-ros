@@ -3,6 +3,9 @@
     <arg name="guidanceOn" default="true"/>
     <arg name="GL" default="OEHG_test"/>
 
+    <!-- Model -->
+    <arg name="model" default="M300"/>
+
     <!-- Use RTK -->
     <arg name="useRTK" default="false"/>
 
@@ -48,6 +51,8 @@
 
     <param name="guidanceOn" value="$(arg guidanceOn)"/>
     <param name="GL" value="$(arg GL)"/>
+
+    <param name="model" value="$(arg model)"/>
 
     <param name="useRTK" value="$(arg useRTK)"/>
 
