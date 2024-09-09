@@ -100,7 +100,6 @@ class SingleRun:
             self.takeoffHeight = self.throttleTestHeight
         
         self.loopNum = 1
-        self.t = 0
         self.nn = 3
 
         rospy.init_node(self.algorithmName, anonymous=True)
@@ -599,7 +598,7 @@ class SingleRun:
         return np.array([elevationAngle, azimuthAngle])
 
     def addOutliers(self):
-        if np.abs(self.t - 1000 * self.tStep) < 1e-2 or np.abs(self.t - 2000 * self.tStep) < 1e-2:
+        if np.abs(self.stateTime - 1000 * self.tStep) < 1e-2 or np.abs(self.stateTime - 2000 * self.tStep) < 1e-2:
             self.z = np.deg2rad([[10], [-70]])
 
     def log(self):
