@@ -22,6 +22,7 @@ class PlotSingleRun:
         self.gifLoop = 1
 
     def findLastDir(self):
+        # self.baseDir = os.path.join(os.getcwd(), 'src/observability_enhancement/data')
         self.baseDir = os.path.join(os.getcwd(), 'data') if self.packagePath is None else os.path.join(self.packagePath, 'data')
         dirs = sorted(os.listdir(self.baseDir))
         for d in dirs:
