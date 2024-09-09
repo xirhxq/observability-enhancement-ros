@@ -357,13 +357,13 @@ class PlotSingleRun:
             measurementUseMatrix[1, i] = measurementUse[i][1]
             
         plt.subplot(2, 1, 1)
-        plt.plot(time[int(self.data[0]['timeDelay'] / self.data[0]['tStep']) + 1:], np.rad2deg(measurementUseMatrix[0][1:]), 'r', linewidth=2.5)
+        plt.plot(time[int(self.data[0]['timeDelay'] / self.data[0]['tStep']) + 1:], np.rad2deg(measurementUseMatrix[0][int(self.data[0]['timeDelay'] / self.data[0]['tStep']) + 1:]), 'r', linewidth=2.5)
         plt.title('Elevation angle', fontsize=10)
         plt.xlabel('Time (s)', fontsize=12)
         plt.ylabel('Used Measurement (deg)', fontsize=12)
         
         plt.subplot(2, 1, 2)
-        plt.plot(time[int(self.data[0]['timeDelay'] / self.data[0]['tStep']) + 1:], np.rad2deg(measurementUseMatrix[1][1:]), 'g', linewidth=2.5)
+        plt.plot(time[int(self.data[0]['timeDelay'] / self.data[0]['tStep']) + 1:], np.rad2deg(measurementUseMatrix[1][int(self.data[0]['timeDelay'] / self.data[0]['tStep']) + 1:]), 'g', linewidth=2.5)
         plt.title('Azimuth angle', fontsize=10)
         plt.xlabel('Time (s)', fontsize=12)
         plt.ylabel('Used Measurement (deg)', fontsize=12)
@@ -653,10 +653,10 @@ class PlotSingleRun:
                 np.arctan2(relativePosition[2, i], np.sqrt(relativePosition[0, i] ** 2 + relativePosition[1, i] ** 2)),
                 np.arctan2(relativePosition[1, i], relativePosition[0, i])
             ])
-        
+            
         fig, ax = plt.subplots(2, 1, figsize=(8, 10))
         for num, direction in enumerate(['elevation angle', 'azimuth angle']):
-            ax[num].plot(time[int(self.data[0]['timeDelay'] / self.data[0]['tStep']):], np.rad2deg(measurementUse[:, num]), linewidth=2.0,
+            ax[num].plot(time[int(self.data[0]['timeDelay'] / self.data[0]['tStep']):], np.rad2deg(measurementUse[int(self.data[0]['timeDelay'] / self.data[0]['tStep']):, num]), linewidth=2.0,
                         label='Measurement of ' + direction)
             ax[num].plot(time, np.rad2deg(losAngle[num, :]), linewidth=2.0,
                         label='Real ' + direction)
