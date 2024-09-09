@@ -31,7 +31,7 @@
     <arg name="takeoff" default="false"/>
 
     <!-- Execution arguments -->
-    <arg name="tStep" default="0.02"/>
+    <arg name="tStep" default="0.08"/>
     <arg name="tUpperLimit" default="100"/>
 
     <!-- Measurement arguments -->

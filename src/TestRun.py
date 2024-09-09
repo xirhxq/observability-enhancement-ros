@@ -81,7 +81,7 @@ class SingleRun:
 
         self.reallyTakeoff = rospy.get_param('takeoff', False) == True
 
-        self.tStep = rospy.get_param('tStep', 0.02)
+        self.tStep = rospy.get_param('tStep', 0.08)
         self.tUpperLimit = rospy.get_param('tUpperLimit', 100)
         
         self.outliers = rospy.get_param('outliers', False) == True
@@ -141,6 +141,7 @@ class SingleRun:
         self.stateStartTime = time.time()
         self.taskTime = 0
         self.stateTime = 0
+        self.loopBeginTime = time.time()
 
         self.takeoffPointENU = np.array([0, 0, self.takeoffHeight])
         self.preparePointENU = self.targetENU - self.unitVectorENU * self.guidanceLength * 2
@@ -489,16 +490,14 @@ class SingleRun:
 
     def run(self):
         while self.state != State.END and not rospy.is_shutdown():
-            self.taskTime = time.time() - self.taskStartTime
-            self.stateTime = time.time() - self.stateStartTime
-
-            self.print() 
-
+            self.loopBeginTime = time.time()
+            self.print()
             self.me.sendHeartbeat()
             self.controlStateMachine()
-
-            time.sleep(self.tStep)
-            self.t += self.tStep
+            if self.state == State.GUIDANCE:
+                time.sleep(self.tStep - (time.time() - self.loopBeginTime))
+            self.taskTime = time.time() - self.taskStartTime
+            self.stateTime = time.time() - self.stateStartTime
 
     def saveLog(self):
         self.fileName = os.path.join(self.folderName, 'data.pkl')
