@@ -10,11 +10,11 @@ from matplotlib.animation import FuncAnimation
 
 class PlotSingleRun:
     def __init__(self, **kwargs):
-        self.useGroundTruth = True
-        self.useFixWingModel = True
+        self.model = kwargs.get('model', 'M300')
+        self.useCamera = kwargs.get('useCamera', False)
         self.baseDir = None
         self.packagePath = kwargs.get('packagePath', None)
-        self.guidanceLawName = kwargs.get('guidanceLawName')
+        self.guidanceLawName =  kwargs.get('GL', 'OEHG_test')
         self.lastDir = None
         self.folderPath = None
         self.file = None
@@ -755,7 +755,7 @@ class PlotSingleRun:
         plt.close()
 
     def plotAll(self):
-        if self.useGroundTruth:
+        if self.model == 'M300':
             self.printMissDistance()
             self.plotLosRate()
             self.plotMeasurementUseAndLosAngle()
@@ -774,14 +774,15 @@ class PlotSingleRun:
             self.plotTargetPositionError()
             self.plotTargetVelocityError()
             self.plotAttitudeMeENU()
-            # self.plotGimbalAngleAndAttitudeAngle()
             self.plotEulerMeAndCommandENU()
             self.createGif()
+            if self.useCamera:
+                self.plotGimbalAngleAndAttitudeAngle()
         else:
             self.plotRelativeDistanceError()
             self.plotRelativeVelocityError()
             self.plotTrajectory()
-            if self.useFixWingModel:
+            if self.model == 'FixedWing':
                 self.plotAttitudeMeENU()
             self.plotAMy()
             self.plotAMz()
