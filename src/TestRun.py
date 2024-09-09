@@ -260,7 +260,7 @@ class SingleRun:
     @stepEntrance
     def toStepBoost(self):
         self.state = State.BOOST
-        self.boostPID = [PID(kp=1.0, ki=0.1, kd=0.0), PID(kp=1.0, ki=0.1, kd=0.0), PID(kp=1.0, ki=0.1, kd=0.0)]
+        self.boostPID = [PID(kp=1.2, ki=0.2, kd=0.0), PID(kp=1.2, ki=0.2, kd=0.0), PID(kp=1.2, ki=0.2, kd=0.0)]
 
     def stepInit(self):
         if not self.reallyTakeoff:
@@ -424,6 +424,8 @@ class SingleRun:
                 hoverThrottle=self.me.hoverThrottle
             )
             self.me.acc2attENUControl(thrust, self.cmdRPYRadENU)
+            print(f"meVelocityBoostENU = {self.me.meVelocityENU}")
+    
         if np.dot(self.me.mePositionENU - self.guidanceStartPointENU, self.unitVectorENU) > 0:
             print(f"stepGuidanceInitialMePositionNED = {self.me.mePositionNED}")
             print(f"stepGuidanceInitialMeVelocityNED = {self.me.meVelocityNED}")

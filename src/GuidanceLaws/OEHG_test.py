@@ -12,7 +12,7 @@ class OEHG_test:
         self.tStep = 0.02
         self.expectedVc = kwargs.get('expectedVc')
         self.kp = 2.0
-        self.ki = 0.1
+        self.ki = 0.3
         self.uOEGLos = np.zeros(3)
 
     def getU(self, relativePosition, relativeVelocity, velMe):
