@@ -91,10 +91,10 @@
 
     <node name="observability_enhancement" pkg="observability_enhancement" type="TestRun.py" output="screen"/>
 
-    <arg name="mode" default="track"/>
+    <!-- <arg name="mode" default="track"/>
 
     <param name="mode" value="$(arg mode)"/>
 
-    <node name="dji_gimbal_control" pkg="observability_enhancement" type="GimbalControl.py" output="log"/>
+    <node name="dji_gimbal_control" pkg="observability_enhancement" type="GimbalControl.py" output="log"/> -->
 
 </launch>
