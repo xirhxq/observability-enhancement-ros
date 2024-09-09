@@ -321,7 +321,7 @@ class SingleRun:
                         self.me.getVelocityENU()
                     ).reshape(3)
         else:
-            self.u = [0.0, 0.0, 0.0]
+            self.u = np.array([0.0, 0.0, 0.0])
 
         print(f'uENU = {pointString(self.u)}')
         assert np.all(np.isfinite(self.u)), "u is not finite"
