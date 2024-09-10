@@ -165,7 +165,6 @@ class SingleRun:
             self.timeStr, 
             self.guidanceLawName
         )
-        os.makedirs(self.folderName, exist_ok=True)
         self.ekf = EKF(self.targetState, self.measurementNoise)
 
         cliOutputFile = open(os.path.join(self.folderName, 'output.txt'), "w")
@@ -210,6 +209,9 @@ class SingleRun:
 
         with open(os.path.join(self.folderName, 'params.json'), 'w') as f:
             json.dump(params, f, indent=4)
+
+    def makeDir(self):
+        os.makedirs(self.folderName, exist_ok=True)
 
     def getTimeNow(self):
         return time.time()
@@ -490,6 +492,7 @@ class SingleRun:
         return True
 
     def run(self):
+        self.makeDir()
         while self.state != State.END and not rospy.is_shutdown():
             self.loopBeginTime = time.time()
             self.print()
