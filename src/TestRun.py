@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+from collections import deque
 import copy
 import datetime
 import json
@@ -101,6 +101,9 @@ class SingleRun:
         
         self.loopNum = 1
         self.nn = 3
+
+        self.timestamps = deque()
+        self.hz = int(1 / self.tStep)
 
         rospy.init_node(self.algorithmName, anonymous=True)
         self.me = M300('suav')
@@ -464,11 +467,22 @@ class SingleRun:
         elif self.state == State.BOOST:
             self.stepBoost()
 
+    def updateFrequency(self):
+        nowTime = time.time()
+
+        self.timestamps.append(nowTime)
+
+        while self.timestamps and self.timestamps[0] < nowTime - 1.0:
+            self.timestamps.popleft()
+
+        self.hz = len(self.timestamps)
+
     def print(self):
         console.clear()
         print('-' * 20)
         print(f'UAV {self.me.name}: state {self.state.name}')
         print(f'Total time: {self.taskTime:.2f}, state time: {self.stateTime:.2f}')
+        print((RED if self.hz < 0.8 / self.tStep else GREEN) + f"Current frequency: {self.hz} Hz" + RESET)
         # print(f'Armed: {"YES" if self.me.isArmed() else "NO"}({self.me.status.arming_state})')
         self.me.printMe()
 
@@ -508,6 +522,7 @@ class SingleRun:
         print(f"ros_state = {rospy.is_shutdown}")
         while self.state != State.END and not rospy.is_shutdown():
             self.loopBeginTime = time.time()
+            self.updateFrequency()
             self.print()
             self.me.sendHeartbeat()
             self.controlStateMachine()
