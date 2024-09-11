@@ -89,12 +89,19 @@
     <param name="throttleTestMin" value="$(arg throttleTestMin)"/>
     <param name="throttleTestMax" value="$(arg throttleTestMax)"/>
 
-    <node name="observability_enhancement" pkg="observability_enhancement" type="TestRun.py" output="screen"/>
 
+    <!-- Nodes for different run type -->
+    <!-- Single -->
+    <!-- <node name="observability_enhancement" pkg="observability_enhancement" type="TestRun.py" output="screen"/> -->
+    <!-- Multi -->
+    <!-- <node name="multi" pkg="observability_enhancement" type="MultiRuns.py" output="screen"/> -->
+    <!-- Repeat -->
+    <node name="repeat" pkg="observability_enhancement" type="RepeatRuns.py" output="screen"/>
+
+
+    <!-- Camera Controller -->
     <!-- <arg name="mode" default="track"/>
-
     <param name="mode" value="$(arg mode)"/>
-
     <node name="dji_gimbal_control" pkg="observability_enhancement" type="GimbalControl.py" output="log"/> -->
 
 </launch>
