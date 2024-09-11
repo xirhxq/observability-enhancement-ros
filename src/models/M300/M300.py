@@ -104,10 +104,11 @@ class M300:
         q = [msg.quaternion.w, msg.quaternion.x, msg.quaternion.y, msg.quaternion.z]
         self.meRPYRadENU = quaternion2euler(q)
         self.meRPYRadNED = rpyENU2NED(self.meRPYRadENU)
-        if not rospy.get_param('useCamera'):
+        if rospy.get_param('useCamera'):
             self.qBuffer.addMessage(q)
             qDelay = self.qBuffer.getMessage()
             if qDelay != None:
+                print('With camera, using delay IMU information with qBuffer......')
                 self.meRPYRadENUDelay = quaternion2euler(qDelay)
                 self.meRPYRadNEDDelay = rpyENU2NED(self.meRPYRadENUDelay)
 
@@ -199,6 +200,8 @@ class M300:
             else:
                 rospy.logerr("set rtk origin failed!")
                 return False
+        else:
+            self.meRTKOrigin = 'unused'
         # rospy.wait_for_service(self.set_local_pos_reference.resolved_name)
         try:
             response = self.set_local_pos_reference()

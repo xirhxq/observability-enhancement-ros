@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+from collections import deque
 import copy
 import datetime
 import json
@@ -61,7 +61,7 @@ class SingleRun:
     def __init__(self, **kwargs):
         rospy.init_node('observability_enhancement', anonymous=True)
         self.algorithmName = 'observability_enhancement'
-
+        self.runType = kwargs.get('runType', 'Single')
         self.guidanceOn = rospy.get_param('guidanceOn') == True
         self.guidanceLawName = rospy.get_param('GL', 'PN')
         
@@ -81,7 +81,7 @@ class SingleRun:
 
         self.reallyTakeoff = rospy.get_param('takeoff', False) == True
 
-        self.tStep = rospy.get_param('tStep', 0.02)
+        self.tStep = rospy.get_param('tStep', 0.08)
         self.tUpperLimit = rospy.get_param('tUpperLimit', 100)
         
         self.outliers = rospy.get_param('outliers', False) == True
@@ -95,15 +95,15 @@ class SingleRun:
 
         self.useCamera = rospy.get_param('useCamera', False)
         self.cameraPitch = np.degrees(np.arctan((self.takeoffHeight - self.targetHeight) / self.guidanceLength))
-        
-        self.targetNOffset = 34
 
         if self.throttleTestOn: 
             self.takeoffHeight = self.throttleTestHeight
         
         self.loopNum = 1
-        self.t = 0
         self.nn = 3
+
+        self.timestamps = deque()
+        self.hz = int(1 / self.tStep)
 
         rospy.init_node(self.algorithmName, anonymous=True)
         self.me = M300('suav')
@@ -120,18 +120,21 @@ class SingleRun:
         self.yawRadENU = yawRadNED2ENU(self.yawRadNED)
         self.unitVectorEN = np.array([math.sin(self.yawRadNED), math.cos(self.yawRadNED)])
         self.unitVectorENU = np.concatenate([self.unitVectorEN, np.zeros(1)])
-        self.targetLla = NavSatFix(latitude=34.675701, longitude=109.849817, altitude=334.073267)
-        self.targetENU = localOffsetFromGpsOffset(self.targetLla, self.me.meRTKOrigin)
-        self.targetState = np.concatenate([self.guidanceLength * self.unitVectorEN, [self.targetHeight], np.zeros(3)])
-        self.targetState[1] += self.targetNOffset
+        if self.useCamera:
+            self.targetLla = NavSatFix(latitude=34.675701, longitude=109.849817, altitude=334.073267)
+            self.targetENU = localOffsetFromGpsOffset(self.targetLla, self.me.meRTKOrigin)
+            self.targetState = np.concatenate([self.guidanceLength * self.unitVectorEN, [self.targetHeight], np.zeros(3)])
+            self.targetNOffset = 34.0
+            self.targetState[1] += self.targetNOffset
+        else:
+            self.targetENU = np.concatenate([self.guidanceLength * self.unitVectorEN, [20.0]]) 
+            self.targetState = np.concatenate([self.targetENU, np.zeros(3)])
         self.uTarget = np.array([0, 0, 0])
 
         self.u = None
         self.data = []
         self.z = None
-        self.zUse = []
-        self.endControlFlag = 0
-        self.real = False
+        self.zUse = [0.0, 0.0]
 
         self.measurementNoise = np.deg2rad(0.5)
 
@@ -140,12 +143,11 @@ class SingleRun:
         self.stateStartTime = time.time()
         self.taskTime = 0
         self.stateTime = 0
+        self.loopBeginTime = time.time()
 
         self.takeoffPointENU = np.array([0, 0, self.takeoffHeight])
         self.preparePointENU = self.targetENU - self.unitVectorENU * self.guidanceLength * 2
-        self.preparePointENU[2] = self.takeoffHeight - 6.0
-        # self.preparePointENU = np.concatenate([-self.unitVectorEN * self.guidanceLength, np.array([self.takeoffHeight - 3.0])])
-        # self.preparePointENU[1] += self.targetNOffset
+        self.preparePointENU[2] = self.takeoffHeight
         self.guidanceStartPointENU = self.preparePointENU + self.unitVectorENU * self.guidanceLength
         self.initialVelocityENU = np.array([
             self.expectedSpeed * np.sin(self.yawRadNED), 
@@ -160,35 +162,15 @@ class SingleRun:
         rospack = rospkg.RosPack()
         self.packagePath = rospack.get_path(self.algorithmName)
         self.timeStr = kwargs.get('prefix', datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
-        self.folderName = os.path.join(
-            self.packagePath, 
-            'data', 
-            self.timeStr, 
-            self.guidanceLawName
-        )
-        os.makedirs(self.folderName, exist_ok=True)
-        self.ekf = EKF(self.targetState, self.measurementNoise)
-
-        cliOutputFile = open(os.path.join(self.folderName, 'output.txt'), "w")
-
-        def custom_print(*args, **kwargs):
-            message = " ".join(map(str, args))
-            rprint(message, **kwargs)
-            cliOutputFile.write(message + "\n")
-            cliOutputFile.flush()
-
-        builtins.print = custom_print
-
-        print(f"Simulation Condition: {self.takeoffHeight = }, {self.expectedSpeed = }, {self.targetState = }")
-        print(f'{self.guidanceOn = }, {self.throttleTestOn = }')
-        print(f'{self.guidanceLawName = }, {self.me.useRTK = }')
-        print(f'Target @ {pointString(self.targetENU)}')
-        print(f'Prepare @ {pointString(self.preparePointENU)}, guidance start @ {pointString(self.guidanceStartPointENU)}')
-
-        if self.reallyTakeoff:
-            input('Really going to takeoff!!! Input anything to confirm...')
+        if self.runType == 'Single':
+            self.folderName = os.path.join(self.packagePath, 'data', self.timeStr, self.guidanceLawName)
+        elif self.runType == 'Multi':
+            self.folderName = os.path.join(self.packagePath, 'dataMulti', self.timeStr)
+        elif self.runType == 'Repeat':
+            self.folderName = os.path.join(self.packagePath, 'dataRepeat', self.timeStr)
         else:
-            input('No takeoff, input anything to confirm...')
+            print("Wrong with runType")
+        self.ekf = EKF(self.targetState, self.measurementNoise)
 
         if self.guidanceLawName == 'PN':
             self.guidanceLaw = PN()
@@ -204,12 +186,45 @@ class SingleRun:
             self.guidanceLaw = OEHG_test(expectedVc=self.expectedSpeed)
         else:
             raise ValueError("Invalid guidance law name")
+        
 
+    def output(self):
+        if self.runType == 'Repeat':
+            folder_path = os.path.join(self.folderName, self.timeStr)
+        else:
+            folder_path = os.path.join(self.folderName, self.guidanceLawName)
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+        cliOutputFile = open(os.path.join(folder_path, 'output.txt'), "w")
+
+        def custom_print(*args, **kwargs):
+            message = " ".join(map(str, args))
+            rprint(message, **kwargs)
+            cliOutputFile.write(message + "\n")
+            cliOutputFile.flush()
+
+        builtins.print = custom_print
+
+        print(f"Simulation Condition: {self.takeoffHeight = }, {self.expectedSpeed = }, {self.targetState = }")
+        print(f'{self.guidanceOn = }, {self.throttleTestOn = }')
+        print(f'{self.guidanceLawName = }, {self.me.useRTK = }, {self.useCamera = }')
+        print(f'{self.safetyDistance = }')
+        print(f'Target @ {pointString(self.targetENU)}')
+        print(f'Prepare @ {pointString(self.preparePointENU)}, guidance start @ {pointString(self.guidanceStartPointENU)}')
+
+        if self.reallyTakeoff:
+            input('Really going to takeoff!!! Input anything to confirm...')
+        else:
+            input('No takeoff, input anything to confirm...')
+        
         # Save parameters to file
         params = rospy.get_param('/')
 
         with open(os.path.join(self.folderName, 'params.json'), 'w') as f:
             json.dump(params, f, indent=4)
+
+    def makeDir(self):
+        os.makedirs(self.folderName, exist_ok=True)
 
     def getTimeNow(self):
         return time.time()
@@ -259,7 +274,7 @@ class SingleRun:
     @stepEntrance
     def toStepBoost(self):
         self.state = State.BOOST
-        self.boostPID = [PID(kp=1.0, ki=0.1, kd=0.0), PID(kp=1.0, ki=0.1, kd=0.0), PID(kp=1.0, ki=0.1, kd=0.0)]
+        self.boostPID = [PID(kp=1.2, ki=0.2, kd=0.0), PID(kp=1.2, ki=0.2, kd=0.0), PID(kp=1.2, ki=0.2, kd=0.0)]
 
     def stepInit(self):
         if not self.reallyTakeoff:
@@ -297,32 +312,32 @@ class SingleRun:
             print('Time limit exceeded, guidance end!')
             self.toStepLand()
             return
-        
-        if np.linalg.norm(self.getRelativePosition()) <= 0.1:
-            print('Less than safety distance to estimated target, guidance end!')
-            self.toStepHover()
-            return
-        
-        if self.me.mePositionENU[2] <= self.targetState[2]:
-            print('Lower than estimated target, guidance end!')
-            self.toStepHover()
-            return
 
         if not self.safetyModule():
             self.toStepHover()
             return
             
         self.getMeasurement()
+
         if self.loopNum > np.floor(self.timeDelay / self.tStep): 
-            if (len(self.data) > 1 ) and (not len(self.data[-1]['measurementUse']) == 0 ):
+            if self.timeDelay > 0:
+                self.ekf.getMeState(
+                    self.data[int(self.loopNum - np.floor(self.timeDelay / self.tStep) - 1)]['mePositionENU'])
+            else:
+                self.ekf.getMeState(self.me.getPositionENU())
+        
+            if len(self.data) > 1:
                 self.MeasurementFiltering()
             self.ekf.newFrame(self.tStep, self.uTarget, self.zUse)
-        print(f"estimate position ENU = {pointString(self.ekf.x[:3])}")
-        self.u = self.guidanceLaw.getU(
-                    self.getRelativePosition(),
-                    self.getRelativeVelocity(), 
-                    self.me.getVelocityENU()
-                ).reshape(3)
+            print(f"estimate position ENU = {pointString(self.ekf.x[:3])}")
+            self.u = self.guidanceLaw.getU(
+                        self.getRelativePosition(),
+                        self.getRelativeVelocity(), 
+                        self.me.getVelocityENU()
+                    ).reshape(3)
+        else:
+            self.u = np.array([0.0, 0.0, 0.0])
+
         print(f'uENU = {pointString(self.u)}')
         assert np.all(np.isfinite(self.u)), "u is not finite"
         
@@ -416,13 +431,15 @@ class SingleRun:
             # self.me.velocityENUControl(self.initialVelocityENU, self.yawRadENU)
             vErrorENU = self.initialVelocityENU - self.me.meVelocityENU
             amccCd = np.array([self.boostPID[i].compute(vErrorENU[i]) for i in range(3)])
-            print(f"velocityCtrlCommand = {pointString(amccCd)}")
+            print(f"boostVelocityCtrlCommand = {pointString(amccCd)}")
             thrust, self.cmdRPYRadENU = accENUYawENU2EulerENUThrust(
                 accENU= amccCd, 
                 yawRadENU=self.yawRadENU, 
                 hoverThrottle=self.me.hoverThrottle
             )
             self.me.acc2attENUControl(thrust, self.cmdRPYRadENU)
+            print(f"meVelocityBoostENU = {self.me.meVelocityENU}")
+    
         if np.dot(self.me.mePositionENU - self.guidanceStartPointENU, self.unitVectorENU) > 0:
             print(f"stepGuidanceInitialMePositionNED = {self.me.mePositionNED}")
             print(f"stepGuidanceInitialMeVelocityNED = {self.me.meVelocityNED}")
@@ -450,15 +467,32 @@ class SingleRun:
         elif self.state == State.BOOST:
             self.stepBoost()
 
+    def updateFrequency(self):
+        nowTime = time.time()
+
+        self.timestamps.append(nowTime)
+
+        while self.timestamps and self.timestamps[0] < nowTime - 1.0:
+            self.timestamps.popleft()
+
+        self.hz = len(self.timestamps)
+
     def print(self):
         console.clear()
         print('-' * 20)
         print(f'UAV {self.me.name}: state {self.state.name}')
         print(f'Total time: {self.taskTime:.2f}, state time: {self.stateTime:.2f}')
+        print((RED if self.hz < 0.8 / self.tStep else GREEN) + f"Current frequency: {self.hz} Hz" + RESET)
         # print(f'Armed: {"YES" if self.me.isArmed() else "NO"}({self.me.status.arming_state})')
         self.me.printMe()
 
     def safetyModule(self):
+        if np.linalg.norm(self.getRelativePosition()) <= 0.1:
+            print('Less than 0.1m to estimated target, guidance end!')
+            return False
+        if self.me.mePositionENU[2] <= self.ekf.x[2]:
+            print('Lower than estimated target, guidance end!')
+            return False
         if self.me.underHeight(self.safetyMinHeight):
             print('Safety module: too low, quit guidance...')
             return False
@@ -482,17 +516,20 @@ class SingleRun:
         return True
 
     def run(self):
+        self.makeDir()
+        self.output()
+        print(f"self.state = {self.state}")
+        print(f"ros_state = {rospy.is_shutdown}")
         while self.state != State.END and not rospy.is_shutdown():
-            self.taskTime = time.time() - self.taskStartTime
-            self.stateTime = time.time() - self.stateStartTime
-
-            self.print() 
-
+            self.loopBeginTime = time.time()
+            self.updateFrequency()
+            self.print()
             self.me.sendHeartbeat()
             self.controlStateMachine()
-
-            time.sleep(self.tStep)
-            self.t += self.tStep
+            if self.state == State.GUIDANCE and self.tStep - (time.time() - self.loopBeginTime) >= 0:
+                time.sleep(self.tStep - (time.time() - self.loopBeginTime))
+            self.taskTime = time.time() - self.taskStartTime
+            self.stateTime = time.time() - self.stateStartTime
 
     def saveLog(self):
         self.fileName = os.path.join(self.folderName, 'data.pkl')
@@ -501,17 +538,12 @@ class SingleRun:
 
         print(f"Data saved to {self.fileName}")
 
-    def update(self, u):
-        self.me.update(u, self.tStep)
-        self.t += self.tStep
-        self.loopNum += 1
-
     def getMeasurement(self):
         if self.useCamera:
             lookAngle = self.getLookAngle()
             LOSdirectionCameraFRD = np.array([1, np.tan(lookAngle[1]), np.tan(lookAngle[0])])/np.linalg.norm(np.array([1, np.tan(lookAngle[1]), np.tan(lookAngle[0])]))
             LOSdirectionBodyFRD = camera2bodyFRDrotationMatrix(np.deg2rad(self.cameraPitch)) @ LOSdirectionCameraFRD
-            LOSdirectionNED = frd2nedRotationMatrix(self.me.meRPYRadNED) @ LOSdirectionBodyFRD
+            LOSdirectionNED = frd2nedRotationMatrix(self.me.meRPYRadNEDDelay) @ LOSdirectionBodyFRD
             LOSdirectionENU = ned2enu(LOSdirectionNED)
             self.z = np.array([np.arctan2(LOSdirectionENU[2], np.sqrt(LOSdirectionENU[0] ** 2 + LOSdirectionENU[1] ** 2)),
                             np.arctan2(LOSdirectionENU[1], LOSdirectionENU[0])])
@@ -519,6 +551,7 @@ class SingleRun:
             self.z[0] = rad_round(self.z[0])
             self.z[1] = rad_round(self.z[1])
             print(f"measurementsDegLimit = {np.rad2deg(self.z)}")
+            self.zUse = self.z
         else:
             relPos = self.getRelativePosition(True)
             self.z = np.array([np.arctan2(relPos[2], np.sqrt(relPos[0] ** 2 + relPos[1] ** 2)),
@@ -529,20 +562,18 @@ class SingleRun:
             print(f"measurementsDegLimit = {np.rad2deg(self.z)}")
             if self.outliers:
                 self.addOutliers()
-
-        if self.loopNum > np.floor(self.timeDelay / self.tStep):
-            if self.timeDelay > 0:
-                self.ekf.getMeState(
-                    self.data[int(self.loopNum - np.floor(self.timeDelay / self.tStep) - 1)]['mePositionENU'])
-                self.zUse = self.data[int(self.loopNum - np.floor(self.timeDelay / self.tStep) - 1)]['measurement']
-            else:
-                self.ekf.getMeState(self.me.getPositionENU())
-                self.zUse = self.z
+            if self.loopNum > np.floor(self.timeDelay / self.tStep):
+                if self.timeDelay > 0:          
+                    self.zUse = self.data[int(self.loopNum - np.floor(self.timeDelay / self.tStep) - 1)]['measurement']
+                else:
+                    self.zUse = self.z
 
     def MeasurementFiltering(self):
-        if rad_round(np.abs(self.zUse[0] - self.data[-1]['measurementUse'][0])) > np.deg2rad(8) or \
-                rad_round(np.abs(self.zUse[1] - self.data[-1]['measurementUse'][1])) > np.deg2rad(8):
-            self.zUse = self.data[-2]['measurementUse']
+        print('With measurementfiltering......')
+        if (not (self.data[-1]['measurementUse'][0] == 0.0 and self.data[-1]['measurementUse'][1] == 0.0)) and \
+            (rad_round(np.abs(self.zUse[0] - self.data[-1]['measurementUse'][0])) > np.deg2rad(8) or \
+            rad_round(np.abs(self.zUse[1] - self.data[-1]['measurementUse'][1])) > np.deg2rad(8)):
+                self.zUse = self.data[-2]['measurementUse']
 
     def getRelativePosition(self, real = False):
         if real:
@@ -598,7 +629,7 @@ class SingleRun:
         return np.array([elevationAngle, azimuthAngle])
 
     def addOutliers(self):
-        if np.abs(self.t - 1000 * self.tStep) < 1e-2 or np.abs(self.t - 2000 * self.tStep) < 1e-2:
+        if np.abs(self.stateTime - 1000 * self.tStep) < 1e-2 or np.abs(self.stateTime - 2000 * self.tStep) < 1e-2:
             self.z = np.deg2rad([[10], [-70]])
 
     def log(self):
@@ -644,7 +675,7 @@ class SingleRun:
 
 def main():
     sr = SingleRun()
-    sr.run()
+    sr.run('Single')
     rospy.signal_shutdown('Shutting down')
     sr.spinThread.join()
 

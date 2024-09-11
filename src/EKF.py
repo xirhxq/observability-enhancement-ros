@@ -58,8 +58,8 @@ class EKF:
     def setFGQ(self, dt):
         self.F = np.block([[np.eye(3), dt * np.eye(3)], [np.zeros((3, 3)), np.eye(3)]])
         self.G = np.block([[0.5 * dt**2 * np.eye(3)], [dt * np.eye(3)]])
-        GG = np.dot(np.block([[dt**2 / 2 * np.eye(3)], [dt * np.eye(3)]]), [[self.sigmaV**2], [self.sigmaV**2], [self.sigmaV**2]])
-        self.Q = np.dot(GG, GG.T)
+        GG = np.block([[dt**2 / 2 * np.eye(3)], [dt * np.eye(3)]])
+        self.Q = np.dot(GG, GG.T) * self.sigmaV**2
 
     @staticmethod
     def h(x):
