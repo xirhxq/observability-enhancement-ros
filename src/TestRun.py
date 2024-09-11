@@ -61,7 +61,7 @@ class SingleRun:
     def __init__(self, **kwargs):
         rospy.init_node('observability_enhancement', anonymous=True)
         self.algorithmName = 'observability_enhancement'
-
+        self.runType = kwargs.get('runType', 'Single')
         self.guidanceOn = rospy.get_param('guidanceOn') == True
         self.guidanceLawName = rospy.get_param('GL', 'PN')
         
@@ -159,15 +159,40 @@ class SingleRun:
         rospack = rospkg.RosPack()
         self.packagePath = rospack.get_path(self.algorithmName)
         self.timeStr = kwargs.get('prefix', datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
-        self.folderName = os.path.join(
-            self.packagePath, 
-            'data', 
-            self.timeStr, 
-            self.guidanceLawName
-        )
+        if self.runType == 'Single':
+            self.folderName = os.path.join(self.packagePath, 'data', self.timeStr, self.guidanceLawName)
+        elif self.runType == 'Multi':
+            self.folderName = os.path.join(self.packagePath, 'dataMulti', self.timeStr)
+        elif self.runType == 'Repeat':
+            self.folderName = os.path.join(self.packagePath, 'dataRepeat', self.timeStr)
+        else:
+            print("Wrong with runType")
         self.ekf = EKF(self.targetState, self.measurementNoise)
 
-        cliOutputFile = open(os.path.join(self.folderName, 'output.txt'), "w")
+        if self.guidanceLawName == 'PN':
+            self.guidanceLaw = PN()
+        elif self.guidanceLawName == 'PN_test':
+            self.guidanceLaw = PN_test(expectedVc=self.expectedSpeed)
+        elif self.guidanceLawName == 'OEG':
+            self.guidanceLaw = OEG()
+        elif self.guidanceLawName == 'RAIM':
+            self.guidanceLaw = RAIM()
+        elif self.guidanceLawName == 'OEHG':
+            self.guidanceLaw = OEHG()
+        elif self.guidanceLawName == 'OEHG_test':
+            self.guidanceLaw = OEHG_test(expectedVc=self.expectedSpeed)
+        else:
+            raise ValueError("Invalid guidance law name")
+        
+
+    def output(self):
+        if self.runType == 'Repeat':
+            folder_path = os.path.join(self.folderName, self.timeStr)
+        else:
+            folder_path = os.path.join(self.folderName, self.guidanceLawName)
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+        cliOutputFile = open(os.path.join(folder_path, 'output.txt'), "w")
 
         def custom_print(*args, **kwargs):
             message = " ".join(map(str, args))
@@ -188,22 +213,7 @@ class SingleRun:
             input('Really going to takeoff!!! Input anything to confirm...')
         else:
             input('No takeoff, input anything to confirm...')
-
-        if self.guidanceLawName == 'PN':
-            self.guidanceLaw = PN()
-        elif self.guidanceLawName == 'PN_test':
-            self.guidanceLaw = PN_test(expectedVc=self.expectedSpeed)
-        elif self.guidanceLawName == 'OEG':
-            self.guidanceLaw = OEG()
-        elif self.guidanceLawName == 'RAIM':
-            self.guidanceLaw = RAIM()
-        elif self.guidanceLawName == 'OEHG':
-            self.guidanceLaw = OEHG()
-        elif self.guidanceLawName == 'OEHG_test':
-            self.guidanceLaw = OEHG_test(expectedVc=self.expectedSpeed)
-        else:
-            raise ValueError("Invalid guidance law name")
-
+        
         # Save parameters to file
         params = rospy.get_param('/')
 
@@ -493,12 +503,15 @@ class SingleRun:
 
     def run(self):
         self.makeDir()
+        self.output()
+        print(f"self.state = {self.state}")
+        print(f"ros_state = {rospy.is_shutdown}")
         while self.state != State.END and not rospy.is_shutdown():
             self.loopBeginTime = time.time()
             self.print()
             self.me.sendHeartbeat()
             self.controlStateMachine()
-            if self.state == State.GUIDANCE:
+            if self.state == State.GUIDANCE and self.tStep - (time.time() - self.loopBeginTime) >= 0:
                 time.sleep(self.tStep - (time.time() - self.loopBeginTime))
             self.taskTime = time.time() - self.taskStartTime
             self.stateTime = time.time() - self.stateStartTime
@@ -647,7 +660,7 @@ class SingleRun:
 
 def main():
     sr = SingleRun()
-    sr.run()
+    sr.run('Single')
     rospy.signal_shutdown('Shutting down')
     sr.spinThread.join()
 

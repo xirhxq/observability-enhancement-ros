@@ -1,7 +1,7 @@
+#!/usr/bin/env python3
 import datetime
 from TestRun import SingleRun
 import rospy
-import rospkg
 import pickle
 import os
 from PlotMultiRuns import PlotMultiRuns
@@ -18,23 +18,19 @@ class MultiRuns:
 
     def run(self):
         for guidanceLaw in self.guidanceLaws:
-            sr = SingleRun()
+            sr = SingleRun(runType = 'Multi')
             sr.guidanceLawName = guidanceLaw
             sr.timeStr = self.timeStr
-            sr.folderName =  self.folderName = os.path.join(
-            sr.packagePath, 
-            'dataMulti'
-        )
+            sr.folderName =  self.folderName = os.path.join(sr.packagePath, 'dataMulti', self.timeStr)
             sr.run()
-            rospy.signal_shutdown('Shutting down')
-            sr.spinThread.join()
 
             self.saveLog(sr)
             del sr
+        rospy.signal_shutdown('Shutting down')
 
     def saveLog(self, sr):
-        os.makedirs(os.path.join(self.folderName, self.timeStr, sr.guidanceLawName), exist_ok=True)
-        self.fileName = os.path.join(self.folderName, self.timeStr, sr.guidanceLawName, 'data.pkl')
+        os.makedirs(os.path.join(self.folderName, sr.guidanceLawName), exist_ok=True)
+        self.fileName = os.path.join(self.folderName, sr.guidanceLawName, 'data.pkl')
         with open(self.fileName, "wb") as file:
             pickle.dump(sr.data, file)
 

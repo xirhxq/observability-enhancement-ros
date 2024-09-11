@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import datetime
 from TestRun import SingleRun
 import rospy
@@ -7,7 +8,7 @@ from PlotRepeatRuns import PlotRepeatRuns
 
 class RepeatRuns:
     def __init__(self):
-        self.repeatTime = 5 
+        self.repeatTime = 2 
         self.guidanceLaw = None
         self.timeStr = self.getCurrentTimeStr()
         self.folderName = None
@@ -18,22 +19,21 @@ class RepeatRuns:
 
     def run(self):
         for num in range(self.repeatTime):
-            sr = SingleRun()
+            sr = SingleRun(runType = 'Repeat')
             self.guidanceLaw = sr.guidanceLawName
-            sr.folderName =  self.folderName = os.path.join(
+            self.folderName = os.path.join(
             sr.packagePath, 
-            'dataRepeat'
-        )
+            'dataRepeat',
+            self.timeStr)
+            sr.folderName =  self.folderName
             sr.run()
-            rospy.signal_shutdown('Shutting down')
-            sr.spinThread.join()
-
             self.saveLog(sr)
             del sr
+        rospy.signal_shutdown('Shutting down')
 
     def saveLog(self, sr):
-        os.makedirs(os.path.join(self.folderName, self.timeStr), exist_ok=True)
-        self.fileName = os.path.join(self.folderName, self.timeStr, sr.timeStr, 'data.pkl')
+        os.makedirs(self.folderName, exist_ok=True)
+        self.fileName = os.path.join(self.folderName, sr.timeStr, 'data.pkl')
         with open(self.fileName, "wb") as file:
             pickle.dump(sr.data, file)
 
@@ -43,7 +43,7 @@ class RepeatRuns:
 if __name__ == '__main__':
     rr = RepeatRuns()
     rr.run()
-
-    pmr = PlotRepeatRuns(baseDir = rr.folderName, guidanceLaw = rr.guidanceLaw)
+    print(f"rr.folderName = {rr.folderName}")
+    pmr = PlotRepeatRuns(baseDir = rr.folderName, guidanceLaw = rr.guidanceLaw, repeatTime = rr.repeatTime)
     pmr.loadData()
     pmr.plotAll()
