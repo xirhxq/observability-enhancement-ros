@@ -31,7 +31,7 @@ from rich import print as rprint
 
 console = Console()
 
-from models.M300.M300 import M300
+from models.Iris import Iris
 
 from Utils import *
 
@@ -109,26 +109,29 @@ class SingleRun:
         self.me = M300('suav')
         self.spinThread = threading.Thread(target=lambda: rospy.spin())
         self.spinThread.start()
-
-        print(f'Wait for GPS Origin')
-        while not rospy.is_shutdown() and self.me.meRTKOrigin is None:
-            time.sleep(0.1)
-            self.me.set_local_position()
-        print(f'Get GPS origin!')
+        
+        self.packagePath = get_package_share_directory(self.algorithmName)
+        
+        if self.useVicon: 
+            print(f'Wait for Position Origin')
+            while rclpy.ok() and self.me.meOrigin is None:
+                time.sleep(0.1)
+                self.me.set_local_position()
+            print(f'Get Position origin!')
 
         self.yawRadNED = np.deg2rad(self.yawDegNED)
         self.yawRadENU = yawRadNED2ENU(self.yawRadNED)
         self.unitVectorEN = np.array([math.sin(self.yawRadNED), math.cos(self.yawRadNED)])
         self.unitVectorENU = np.concatenate([self.unitVectorEN, np.zeros(1)])
         if self.useCamera:
-            self.targetLla = NavSatFix(latitude=34.675701, longitude=109.849817, altitude=334.073267)
-            self.targetENU = localOffsetFromGpsOffset(self.targetLla, self.me.meRTKOrigin)
-            self.targetState = np.concatenate([self.guidanceLength * self.unitVectorEN, [self.targetHeight], np.zeros(3)])
-            self.targetNOffset = 34.0
-            self.targetState[1] += self.targetNOffset
+            pass
         else:
-            self.targetENU = np.concatenate([self.guidanceLength * self.unitVectorEN, [20.0]]) 
-            self.targetState = np.concatenate([self.targetENU, np.zeros(3)])
+            if self.useVicon:
+                self.targetENU = [0.0, 0.0, 0.0]
+                self.targetState = np.concatenate([self.targetENU, np.zeros(3)])
+            else:
+                self.targetENU = np.concatenate([self.guidanceLength * self.unitVectorEN, [20.0]]) 
+                self.targetState = np.concatenate([self.targetENU, np.zeros(3)])
         self.uTarget = np.array([0, 0, 0])
 
         self.u = None
@@ -207,7 +210,7 @@ class SingleRun:
 
         print(f"Simulation Condition: {self.takeoffHeight = }, {self.expectedSpeed = }, {self.targetState = }")
         print(f'{self.guidanceOn = }, {self.throttleTestOn = }')
-        print(f'{self.guidanceLawName = }, {self.me.useRTK = }, {self.useCamera = }')
+        print(f'{self.guidanceLawName = }, {self.useVicon = }, {self.useCamera = }')
         print(f'{self.safetyDistance = }')
         print(f'Target @ {pointString(self.targetENU)}')
         print(f'Prepare @ {pointString(self.preparePointENU)}, guidance start @ {pointString(self.guidanceStartPointENU)}')
@@ -237,7 +240,7 @@ class SingleRun:
     @stepEntrance
     def toStepPrepare(self):
         self.state = State.PREPARE
-        self.me.setVelocityControlMode()
+        self.me.setPositionControlMode()
 
     @stepEntrance
     def toStepGuidance(self):
@@ -266,25 +269,26 @@ class SingleRun:
         self.changeTime = self.throttleTestChangeTime
         self.changeStep = self.throttleTestChangeTime
         self.throttleTestAdjustPosition = False
+        self.me.setAttitudeControlMode()
 
     @stepEntrance
     def toStepHover(self):
         self.state = State.HOVER
+        self.hoverPID = [PID(kp=1.0, ki=0.1, kd=0.0), PID(kp=1.0, ki=0.1, kd=0.0), PID(kp=1.0, ki=0.1, kd=0.0)]
+        self.me.setAttitudeControlMode()
 
     @stepEntrance
     def toStepBoost(self):
         self.state = State.BOOST
         self.boostPID = [PID(kp=1.2, ki=0.2, kd=0.0), PID(kp=1.2, ki=0.2, kd=0.0), PID(kp=1.2, ki=0.2, kd=0.0)]
+        self.me.setAttitudeControlMode()
 
     def stepInit(self):
-        if not self.reallyTakeoff:
+        self.me.intoOffboardMode()
+        self.me.arm()
+        if self.me.isArmed():
+            print('Initialization completed')
             self.toStepTakeoff()
-            return
-        if not self.me.obtain_control() or not self.me.monitored_takeoff():
-            self.toStepLand()
-            return
-        print('Initialization completed')
-        self.toStepTakeoff()
 
     def stepTakeoff(self):
         if self.reallyTakeoff:
@@ -391,9 +395,9 @@ class SingleRun:
         
         self.throttle = (self.throttleMin + self.throttleMax) / 2.0
         print(f'Between {self.throttleMin:.3f} and {self.throttleMax:.3f}: try {self.throttle:.3f}')
-        print(f'{self.me.meAccelerationENUFused[2] = }')
+        print(f'{self.me.meAccelerationENU[2] = }')
         if self.stateTime >= self.changeTime:
-            if self.me.meAccelerationENUFused[2] < 0:
+            if self.me.meAccelerationENU[2] < 0:
                 self.throttleMin = self.throttle
             else:
                 self.throttleMax = self.throttle
@@ -421,8 +425,15 @@ class SingleRun:
         self.me.acc2attENUControl(self.throttle, np.array([0.0, 0.0, self.yawRadENU]))
 
     def stepHover(self):
-        # self.getMeasurement()
-        self.me.hoverWithYaw(self.yawRadENU)
+        vErrorENU = [0.0, 0.0, 0.0] - self.me.meVelocityENU
+        amccCd = np.array([self.hoverPID[i].compute(vErrorENU[i]) for i in range(3)])
+        print(f"hoverVelocityCtrlCommand = {pointString(amccCd)}")
+        thrust, self.cmdRPYRadENU = accENUYawENU2EulerENUThrust(
+                accENU= amccCd, 
+                yawRadENU=self.yawRadENU, 
+                hoverThrottle=self.me.hoverThrottle
+            )
+        self.me.acc2attENUControl(thrust, self.cmdRPYRadENU)
         if self.stateTime >= 5.0:
             self.toStepBack()
 
@@ -649,7 +660,6 @@ class SingleRun:
         currentData['meRPYNED'] = copy.copy(self.me.meRPYRadNED)
         currentData['cmdRPYENU'] = copy.copy(self.cmdRPYRadENU)
         currentData['cmdRPYNED'] = copy.copy(self.cmdRPYRadNED)
-        currentData['meAccelerationFusedNED'] = copy.copy(enu2ned(self.me.meAccelerationENUFused))
         currentData['meAccelerationNED'] = copy.copy(self.me.getAccelerationNED())
         currentData['meAcceCommandNED'] = copy.copy(self.cmdAccNED)
         currentData['relativePosition'] = copy.copy(self.getRelativePosition())
@@ -666,9 +676,6 @@ class SingleRun:
             self.ekf.x - np.concatenate([self.me.getPositionENU(), self.me.getVelocityENU()]))
         currentData['measurement'] = copy.copy(self.z)
         currentData['measurementUse'] = copy.copy(self.zUse)
-        currentData['meGimbalRPYENURad'] = copy.copy(self.me.meGimbalRPYENURad)
-        currentData['meGPSLla'] = copy.copy(self.me.meGPSLla)
-        currentData['meRTKLla'] = copy.copy(self.me.meRTKLla)
         
         self.data.append(currentData)
 

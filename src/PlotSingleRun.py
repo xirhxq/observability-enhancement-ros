@@ -547,7 +547,7 @@ class PlotSingleRun:
         time = [d['t'] for d in self.data]
         for i in range(len(self.data)):
             acceNED[0:3, i] = np.squeeze(self.data[i]['meAcceCommandNED'])
-            acceFusedResponse[0:3, i] = np.squeeze(self.data[i]['meAccelerationFusedNED'])
+            acceFusedResponse[0:3, i] = np.squeeze(self.data[i]['meAccelerationNED'])
 
         plt.subplot(3, 1, 1)
         plt.plot(time, acceNED[0, :], 'r', linewidth=2, label="Acceleration command N")

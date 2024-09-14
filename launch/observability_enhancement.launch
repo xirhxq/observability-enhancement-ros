@@ -4,10 +4,10 @@
     <arg name="GL" default="OEHG_test"/>
 
     <!-- Model -->
-    <arg name="model" default="M300"/>
+    <arg name="model" default="Iris"/>
 
-    <!-- Use RTK -->
-    <arg name="useRTK" default="false"/>
+    <!-- Use Vicon -->
+    <arg name="useVicon" default="false"/>
 
     <!-- Core arguments -->
     <arg name="expectedSpeed" default="1.0"/>
