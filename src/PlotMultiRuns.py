@@ -166,6 +166,29 @@ class PlotMultiRuns:
         plt.savefig(os.path.join(self.folderName, 'MissDistance.png'))
         plt.close()
 
+    def plotLookAngle(self):
+        colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        fig, ax = plt.subplots(2, 1, figsize=(8, 10))
+        for i in range(len(self.guidanceLaws)):
+            time = np.zeros((1, len(self.data[i])))
+            lookAngle = np.zeros((2, len(self.data[i])))
+            for j in range(len(self.data[i])):
+                time[0, j] = np.squeeze(self.data[i][j]['t'])
+                lookAngle[:2, j] = np.squeeze(self.data[i][j]['lookAngle'])
+            ax[0].plot(time[0, :], np.rad2deg(lookAngle[0, :]), color = colors[i], linestyle='-', linewidth=2.0,
+                            label=f'{self.guidanceLaws[i]}')
+            ax[1].plot(time[0, :], np.rad2deg(lookAngle[1, :]), color = colors[i], linestyle='-', linewidth=2.0,
+                            label=f'{self.guidanceLaws[i]}')
+            
+            for num, direction in enumerate(['elevation angle', 'azimuth angle']):
+                ax[num].set_xlabel('Time (s)')
+                ax[num].set_ylabel( direction + ' (deg)')
+                ax[num].legend(loc='best')
+    
+        plt.savefig(os.path.join(self.folderName, 'LookAngle.png'))
+        plt.close(fig)
+
+
     def createGif(self, num):
         frames = np.arange(start=0, stop=len(self.data[num]), step=1)
         tq = tqdm.tqdm(total=len(frames))
@@ -241,6 +264,7 @@ class PlotMultiRuns:
         self.plotTargetVelocityErrorENU()
         self.plotMeasurementUseError()
         self.plotMissDistance()
+        self.plotLookAngle()
         for num in range(len(self.guidanceLaws)):
             self.createGif(num)
 
