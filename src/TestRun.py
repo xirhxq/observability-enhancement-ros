@@ -12,8 +12,10 @@ from enum import Enum
 from Utils import *
 
 import numpy as np
-import rospy
-import rospkg
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import NavSatFix
+from ament_index_python.packages import get_package_share_directory
 
 from PID import PID
 from EKF import EKF
@@ -59,41 +61,71 @@ def stepEntrance(method):
 
 class SingleRun:
     def __init__(self, **kwargs):
-        rospy.init_node('observability_enhancement', anonymous=True)
+        super().__init__('observability_enhancement')
         self.algorithmName = 'observability_enhancement'
         self.runType = kwargs.get('runType', 'Single')
-        self.guidanceOn = rospy.get_param('guidanceOn') == True
-        self.guidanceLawName = rospy.get_param('GL', 'PN')
+
+        self.declare_parameter('guidanceOn', True)
+        self.declare_parameter('GL', 'PN')
+        self.declare_parameter('expectedSpeed', 0.0)
+        self.declare_parameter('takeoffHeight', 0.0)
+        self.declare_parameter('targetHeight', 0.0)
+        self.declare_parameter('yawDegNED', 0.0)
+        self.declare_parameter('guidanceLength', 0.0)
+
+        self.declare_parameter('safetyMinHeight', 0.0)
+        self.declare_parameter('safetyMaxHeight', 0.0)
+        self.declare_parameter('safetyMinDescendHeight', 0.0)
+        self.declare_parameter('safetyMaxDescendVelocity', 0.0)
+        self.declare_parameter('safetyMaxAscendVelocity', 0.0)
+        self.declare_parameter('safetyDistance', 0.0)
+        self.declare_parameter('safetyMaxSpeed', 0.0)
+
+        self.declare_parameter('takeoff', False)
+        self.declare_parameter('useVicon', False)
+        self.declare_parameter('tStep', 0.08)
+        self.declare_parameter('tUpperLimit', 100)
+        self.declare_parameter('outliers', False)
+        self.declare_parameter('timeDelay', 0.0)
+
+        self.declare_parameter('throttleTestOn', False)
+        self.declare_parameter('throttleTestHeight', 0.0)
+        self.declare_parameter('throttleTestChangeTime', 0.0)
+        self.declare_parameter('throttleTestMin', 0.0)
+        self.declare_parameter('throttleTestMax', 0.0)
+        self.declare_parameter('useCamera', False)
         
-        self.expectedSpeed = rospy.get_param('expectedSpeed')
-        self.takeoffHeight = rospy.get_param('takeoffHeight')
-        self.targetHeight = rospy.get_param('targetHeight')
-        self.yawDegNED = rospy.get_param('yawDegNED')
-        self.guidanceLength = rospy.get_param('guidanceLength')
+        # Retrieve parameters
+        self.guidanceOn = self.get_parameter('guidanceOn').get_parameter_value().bool_value
+        self.guidanceLawName = self.get_parameter('GL').get_parameter_value().string_value
+        self.expectedSpeed = self.get_parameter('expectedSpeed').get_parameter_value().double_value
+        self.takeoffHeight = self.get_parameter('takeoffHeight').get_parameter_value().double_value
+        self.targetHeight = self.get_parameter('targetHeight').get_parameter_value().double_value
+        self.yawDegNED = self.get_parameter('yawDegNED').get_parameter_value().double_value
+        self.guidanceLength = self.get_parameter('guidanceLength').get_parameter_value().double_value
 
-        self.safetyMinHeight = rospy.get_param('safetyMinHeight')
-        self.safetyMaxHeight = rospy.get_param('safetyMaxHeight')
-        self.safetyMinDescendHeight = rospy.get_param('safetyMinDescendHeight')
-        self.safetyMaxDescendVelocity = rospy.get_param('safetyMaxDescendVelocity')
-        self.safetyMaxAscendVelocity = rospy.get_param('safetyMaxAscendVelocity')
-        self.safetyDistance = rospy.get_param('safetyDistance')
-        self.safetyMaxSpeed = rospy.get_param('safetyMaxSpeed')
+        self.safetyMinHeight = self.get_parameter('safetyMinHeight').get_parameter_value().double_value
+        self.safetyMaxHeight = self.get_parameter('safetyMaxHeight').get_parameter_value().double_value
+        self.safetyMinDescendHeight = self.get_parameter('safetyMinDescendHeight').get_parameter_value().double_value
+        self.safetyMaxDescendVelocity = self.get_parameter('safetyMaxDescendVelocity').get_parameter_value().double_value
+        self.safetyMaxAscendVelocity = self.get_parameter('safetyMaxAscendVelocity').get_parameter_value().double_value
+        self.safetyDistance = self.get_parameter('safetyDistance').get_parameter_value().double_value
+        self.safetyMaxSpeed = self.get_parameter('safetyMaxSpeed').get_parameter_value().double_value
 
-        self.reallyTakeoff = rospy.get_param('takeoff', False) == True
+        self.reallyTakeoff = self.get_parameter('takeoff').get_parameter_value().bool_value
+        self.useVicon =  self.get_parameter('useVicon').get_parameter_value().bool_value
+        self.tStep = self.get_parameter('tStep').get_parameter_value().double_value
+        self.tUpperLimit = self.get_parameter('tUpperLimit').get_parameter_value().integer_value
+        self.outliers = self.get_parameter('outliers').get_parameter_value().bool_value
+        self.timeDelay = self.get_parameter('timeDelay').get_parameter_value().double_value
 
-        self.tStep = rospy.get_param('tStep', 0.08)
-        self.tUpperLimit = rospy.get_param('tUpperLimit', 100)
-        
-        self.outliers = rospy.get_param('outliers', False) == True
-        self.timeDelay = rospy.get_param('timeDelay', 0.0)
+        self.throttleTestOn = self.get_parameter('throttleTestOn').get_parameter_value().bool_value
+        self.throttleTestHeight = self.get_parameter('throttleTestHeight').get_parameter_value().double_value
+        self.throttleTestChangeTime = self.get_parameter('throttleTestChangeTime').get_parameter_value().double_value
+        self.throttleTestMin = self.get_parameter('throttleTestMin').get_parameter_value().double_value
+        self.throttleTestMax = self.get_parameter('throttleTestMax').get_parameter_value().double_value
+        self.useCamera = self.get_parameter('useCamera').get_parameter_value().bool_value
 
-        self.throttleTestOn = rospy.get_param('throttleTestOn') == True
-        self.throttleTestHeight = rospy.get_param('throttleTestHeight')
-        self.throttleTestChangeTime = rospy.get_param('throttleTestChangeTime')
-        self.throttleTestMin = rospy.get_param('throttleTestMin')
-        self.throttleTestMax = rospy.get_param('throttleTestMax')
-
-        self.useCamera = rospy.get_param('useCamera', False)
         self.cameraPitch = np.degrees(np.arctan((self.takeoffHeight - self.targetHeight) / self.guidanceLength))
 
         if self.throttleTestOn: 
@@ -105,9 +137,9 @@ class SingleRun:
         self.timestamps = deque()
         self.hz = int(1 / self.tStep)
 
-        rospy.init_node(self.algorithmName, anonymous=True)
-        self.me = M300('suav')
-        self.spinThread = threading.Thread(target=lambda: rospy.spin())
+        rclpy.init()
+        self.me = Iris()
+        self.spinThread = threading.Thread(target=lambda: rclpy.spin(self.me))
         self.spinThread.start()
         
         self.packagePath = get_package_share_directory(self.algorithmName)
@@ -530,8 +562,7 @@ class SingleRun:
         self.makeDir()
         self.output()
         print(f"self.state = {self.state}")
-        print(f"ros_state = {rospy.is_shutdown}")
-        while self.state != State.END and not rospy.is_shutdown():
+        while self.state != State.END and rclpy.ok():
             self.loopBeginTime = time.time()
             self.updateFrequency()
             self.print()
