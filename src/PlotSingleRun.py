@@ -14,7 +14,7 @@ class PlotSingleRun:
         self.useCamera = kwargs.get('useCamera', False)
         self.baseDir = None
         self.packagePath = kwargs.get('packagePath', None)
-        self.guidanceLawName =  kwargs.get('GL', 'OEHG_test')
+        self.guidanceLawName =  kwargs.get('GL', 'OEHG')
         self.lastDir = None
         self.folderPath = None
         self.file = None
@@ -800,7 +800,7 @@ class PlotSingleRun:
 
 
 if __name__ == '__main__':
-    psr = PlotSingleRun(guidanceLawName = 'OEHG_test')
+    psr = PlotSingleRun(guidanceLawName = 'OEHG')
     psr.findLastDir()
     psr.loadData()
     psr.plotAll()

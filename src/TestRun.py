@@ -206,20 +206,16 @@ class SingleRun:
         self.ekf = EKF(self.targetState, self.measurementNoise)
 
         if self.guidanceLawName == 'PN':
-            self.guidanceLaw = PN()
-        elif self.guidanceLawName == 'PN_test':
             self.guidanceLaw = PN_test(expectedVc=self.expectedSpeed)
         elif self.guidanceLawName == 'OEG':
             self.guidanceLaw = OEG()
         elif self.guidanceLawName == 'RAIM':
             self.guidanceLaw = RAIM()
         elif self.guidanceLawName == 'OEHG':
-            self.guidanceLaw = OEHG()
-        elif self.guidanceLawName == 'OEHG_test':
             self.guidanceLaw = OEHG_test(expectedVc=self.expectedSpeed)
         else:
             raise ValueError("Invalid guidance law name")
-        
+
 
     def output(self):
         if self.runType == 'Repeat':
@@ -720,7 +716,7 @@ def main():
     if len(sr.data) > 0:
         sr.saveLog()
 
-        psr = PlotSingleRun(guidanceLawName='OEHG_test', packagePath=sr.packagePath)
+        psr = PlotSingleRun(guidanceLawName='OEHG', packagePath=sr.packagePath)
         psr.findLastDir()
         psr.loadData()
         psr.plotAll()

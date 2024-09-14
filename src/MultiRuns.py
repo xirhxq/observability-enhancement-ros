@@ -8,7 +8,7 @@ from PlotMultiRuns import PlotMultiRuns
 
 class MultiRuns:
     def __init__(self):
-        self.guidanceLaws = ["PN_test", "OEHG_test"]
+        self.guidanceLaws = ["PN", "OEHG"]
         self.timeStr = self.getCurrentTimeStr()
         self.folderName = None
         self.fileName = None
