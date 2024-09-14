@@ -247,7 +247,16 @@ class SingleRun:
             input('No takeoff, input anything to confirm...')
         
         # Save parameters to file
-        params = rospy.get_param('/')
+        params = {
+            'useCamera': self.useCamera,
+            'cameraPitch': self.cameraPitch,
+            'expectedSpeed': self.expectedSpeed,
+            'guidanceLawName': self.guidanceLawName,
+            'takeoffHeight': self.takeoffHeight,
+            'targetHeight': self.targetHeight,
+            'guidanceLength': self.guidanceLength,
+            'safetyDistance': self.safetyDistance
+        }
 
         with open(os.path.join(self.folderName, 'params.json'), 'w') as f:
             json.dump(params, f, indent=4)
