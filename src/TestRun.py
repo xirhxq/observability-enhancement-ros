@@ -474,7 +474,6 @@ class SingleRun:
 
     def stepBoost(self):
         if self.reallyTakeoff:
-            # self.me.velocityENUControl(self.initialVelocityENU, self.yawRadENU)
             vErrorENU = self.initialVelocityENU - self.me.meVelocityENU
             amccCd = np.array([self.boostPID[i].compute(vErrorENU[i]) for i in range(3)])
             print(f"boostVelocityCtrlCommand = {pointString(amccCd)}")
@@ -715,9 +714,9 @@ class SingleRun:
 
 
 def main():
-    sr = SingleRun()
-    sr.run('Single')
-    rospy.signal_shutdown('Shutting down')
+    sr = SingleRun(runType = 'Single')
+    sr.run()
+    rclpy.shutdown()
     sr.spinThread.join()
 
     print('Run ended, start plotting')
