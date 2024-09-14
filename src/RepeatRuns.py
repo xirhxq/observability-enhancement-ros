@@ -23,6 +23,7 @@ class RepeatRuns:
             self.guidanceLaw = sr.guidanceLawName
             self.folderName = os.path.join(
             sr.packagePath, 
+            'data',
             'dataRepeat',
             self.timeStr)
             sr.folderName =  self.folderName

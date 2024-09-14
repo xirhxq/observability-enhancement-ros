@@ -21,7 +21,7 @@ class MultiRuns:
             sr = SingleRun(runType = 'Multi')
             sr.guidanceLawName = guidanceLaw
             sr.timeStr = self.timeStr
-            sr.folderName =  self.folderName = os.path.join(sr.packagePath, 'dataMulti', self.timeStr)
+            sr.folderName =  self.folderName = os.path.join(sr.packagePath, 'data', 'dataMulti', self.timeStr)
             sr.run()
 
             self.saveLog(sr)

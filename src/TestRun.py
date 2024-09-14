@@ -194,15 +194,13 @@ class SingleRun:
         self.cmdRPYRadENU = np.zeros(3)
         self.cmdRPYRadNED = np.zeros(3)
 
-        rospack = rospkg.RosPack()
-        self.packagePath = rospack.get_path(self.algorithmName)
         self.timeStr = kwargs.get('prefix', datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
         if self.runType == 'Single':
-            self.folderName = os.path.join(self.packagePath, 'data', self.timeStr, self.guidanceLawName)
+            self.folderName = os.path.join(self.packagePath, 'data', 'dataSingle', self.timeStr, self.guidanceLawName)
         elif self.runType == 'Multi':
-            self.folderName = os.path.join(self.packagePath, 'dataMulti', self.timeStr)
+            self.folderName = os.path.join(self.packagePath, 'data', 'dataMulti', self.timeStr)
         elif self.runType == 'Repeat':
-            self.folderName = os.path.join(self.packagePath, 'dataRepeat', self.timeStr)
+            self.folderName = os.path.join(self.packagePath, 'data', 'dataRepeat', self.timeStr)
         else:
             print("Wrong with runType")
         self.ekf = EKF(self.targetState, self.measurementNoise)

@@ -23,7 +23,7 @@ class PlotSingleRun:
 
     def findLastDir(self):
         # self.baseDir = os.path.join(os.getcwd(), 'src/observability_enhancement/data')
-        self.baseDir = os.path.join(os.getcwd(), 'data') if self.packagePath is None else os.path.join(self.packagePath, 'data')
+        self.baseDir = os.path.join(os.getcwd(), 'data') if self.packagePath is None else os.path.join(self.packagePath, 'data', 'dataSingle')
         dirs = sorted(os.listdir(self.baseDir))
         for d in dirs:
             if os.path.isdir(os.path.join(self.baseDir, d)) and not d.startswith('.'):
